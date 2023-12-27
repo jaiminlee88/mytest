@@ -1,0 +1,6 @@
+/home/jmli/mytest/test_cmake/build/CMakeFiles/rebuild_cache.dir
+/home/jmli/mytest/test_cmake/build/CMakeFiles/edit_cache.dir
+/home/jmli/mytest/test_cmake/build/CMakeFiles/Tutorial.dir
+/home/jmli/mytest/test_cmake/build/MathFunctions/CMakeFiles/rebuild_cache.dir
+/home/jmli/mytest/test_cmake/build/MathFunctions/CMakeFiles/edit_cache.dir
+/home/jmli/mytest/test_cmake/build/MathFunctions/CMakeFiles/MathFunctions.dir

@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/Tutorial.dir/tutorial.cc.o  -o Tutorial  -Wl,-rpath,/home/jmli/mytest/test_cmake/build/MathFunctions MathFunctions/libMathFunctions.so 

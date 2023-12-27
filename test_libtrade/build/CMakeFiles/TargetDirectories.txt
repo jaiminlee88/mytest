@@ -1,0 +1,3 @@
+/home/jmli/mytest/test_libtrade/build/CMakeFiles/edit_cache.dir
+/home/jmli/mytest/test_libtrade/build/CMakeFiles/rebuild_cache.dir
+/home/jmli/mytest/test_libtrade/build/CMakeFiles/test_oidgen.dir

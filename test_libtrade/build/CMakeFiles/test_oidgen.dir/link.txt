@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/test_oidgen.dir/test_oidgen.cc.o  -o test_oidgen  /home/jmli/repo/libtradekit/libtrdkit.a 

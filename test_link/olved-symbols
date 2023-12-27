@@ -1,0 +1,1493 @@
+LD(1)                                                                                       GNU Development Tools                                                                                       LD(1)
+
+[1mNAME[0m
+       ld - The GNU linker
+
+[1mSYNOPSIS[0m
+       ld [[1moptions[22m] [4mobjfile[24m ...
+
+[1mDESCRIPTION[0m
+       [1mld [22mcombines a number of object and archive files, relocates their data and ties up symbol references. Usually the last step in compiling a program is to run [1mld[22m.
+
+       [1mld [22maccepts Linker Command Language files written in a superset of AT&T's Link Editor Command Language syntax, to provide explicit and total control over the linking process.
+
+       This man page does not describe the command language; see the [1mld [22mentry in "info" for full details on the command language and on other aspects of the GNU linker.
+
+       This version of [1mld [22muses the general purpose BFD libraries to operate on object files. This allows [1mld [22mto read, combine, and write object files in many different formats---for example, COFF or
+       "a.out".  Different formats may be linked together to produce any available kind of object file.
+
+       Aside from its flexibility, the GNU linker is more helpful than other linkers in providing diagnostic information.  Many linkers abandon execution immediately upon encountering an error; whenever
+       possible, [1mld [22mcontinues executing, allowing you to identify other errors (or, in some cases, to get an output file in spite of the error).
+
+       The GNU linker [1mld [22mis meant to cover a broad range of situations, and to be as compatible as possible with other linkers.  As a result, you have many choices to control its behavior.
+
+[1mOPTIONS[0m
+       The linker supports a plethora of command-line options, but in actual practice few of them are used in any particular context.  For instance, a frequent use of [1mld [22mis to link standard Unix object
+       files on a standard, supported Unix system.  On such a system, to link a file "hello.o":
+
+               ld -o <output> /lib/crt0.o hello.o -lc
+
+       This tells [1mld [22mto produce a file called [4moutput[24m as the result of linking the file "/lib/crt0.o" with "hello.o" and the library "libc.a", which will come from the standard search directories.  (See the
+       discussion of the [1m-l [22moption below.)
+
+       Some of the command-line options to [1mld [22mmay be specified at any point in the command line.  However, options which refer to files, such as [1m-l [22mor [1m-T[22m, cause the file to be read at the point at which
+       the option appears in the command line, relative to the object files and other file options.  Repeating non-file options with a different argument will either have no further effect, or override
+       prior occurrences (those further to the left on the command line) of that option.  Options which may be meaningfully specified more than once are noted in the descriptions below.
+
+       Non-option arguments are object files or archives which are to be linked together.  They may follow, precede, or be mixed in with command-line options, except that an object file argument may not be
+       placed between an option and its argument.
+
+       Usually the linker is invoked with at least one object file, but you can specify other forms of binary input files using [1m-l[22m, [1m-R[22m, and the script command language.  If [4mno[24m binary input files at all are
+       specified, the linker does not produce any output, and issues the message [1mNo input files[22m.
+
+       If the linker cannot recognize the format of an object file, it will assume that it is a linker script.  A script specified in this way augments the main linker script used for the link (either the
+       default linker script or the one specified by using [1m-T[22m).  This feature permits the linker to link against a file which appears to be an object or an archive, but actually merely defines some symbol
+       values, or uses "INPUT" or "GROUP" to load other objects.  Specifying a script in this way merely augments the main linker script, with the extra commands placed after the main script; use the [1m-T[0m
+       option to replace the default linker script entirely, but note the effect of the "INSERT" command.
+
+       For options whose names are a single letter, option arguments must either follow the option letter without intervening whitespace, or be given as separate arguments immediately following the option
+       that requires them.
+
+       For options whose names are multiple letters, either one dash or two can precede the option name; for example, [1m-trace-symbol [22mand [1m--trace-symbol [22mare equivalent.  Note---there is one exception to this
+       rule.  Multiple letter options that start with a lower case 'o' can only be preceded by two dashes.  This is to reduce confusion with the [1m-o [22moption.  So for example [1m-omagic [22msets the output file name
+       to [1mmagic [22mwhereas [1m--omagic [22msets the NMAGIC flag on the output.
+
+       Arguments to multiple-letter options must either be separated from the option name by an equals sign, or be given as separate arguments immediately following the option that requires them.  For
+       example, [1m--trace-symbol foo [22mand [1m--trace-symbol=foo [22mare equivalent.  Unique abbreviations of the names of multiple-letter options are accepted.
+
+       Note---if the linker is being invoked indirectly, via a compiler driver (e.g. [1mgcc[22m) then all the linker command line options should be prefixed by [1m-Wl, [22m(or whatever is appropriate for the particular
+       compiler driver) like this:
+
+                 gcc -Wl,--start-group foo.o bar.o -Wl,--end-group
+
+       This is important, because otherwise the compiler driver program may silently drop the linker options, resulting in a bad link.  Confusion may also arise when passing options that require values
+       through a driver, as the use of a space between option and argument acts as a separator, and causes the driver to pass only the option to the linker and the argument to the compiler.  In this case,
+       it is simplest to use the joined forms of both single- and multiple-letter options, such as:
+
+                 gcc foo.o bar.o -Wl,-eENTRY -Wl,-Map=a.map
+
+       Here is a table of the generic command line switches accepted by the GNU linker:
+
+       [1m@[4m[22mfile[0m
+           Read command-line options from [4mfile[24m.  The options read are inserted in place of the original @[4mfile[24m option.  If [4mfile[24m does not exist, or cannot be read, then the option will be treated literally,
+           and not removed.
+
+           Options in [4mfile[24m are separated by whitespace.  A whitespace character may be included in an option by surrounding the entire option in either single or double quotes.  Any character (including a
+           backslash) may be included by prefixing the character to be included with a backslash.  The [4mfile[24m may itself contain additional @[4mfile[24m options; any such options will be processed recursively.
+
+       [1m-a [4m[22mkeyword[0m
+           This option is supported for HP/UX compatibility.  The [4mkeyword[24m argument must be one of the strings [1marchive[22m, [1mshared[22m, or [1mdefault[22m.  [1m-aarchive [22mis functionally equivalent to [1m-Bstatic[22m, and the other
+           two keywords are functionally equivalent to [1m-Bdynamic[22m.  This option may be used any number of times.
+
+       [1m--audit [4m[22mAUDITLIB[0m
+           Adds [4mAUDITLIB[24m to the "DT_AUDIT" entry of the dynamic section.  [4mAUDITLIB[24m is not checked for existence, nor will it use the DT_SONAME specified in the library.  If specified multiple times
+           "DT_AUDIT" will contain a colon separated list of audit interfaces to use. If the linker finds an object with an audit entry while searching for shared libraries, it will add a corresponding
+           "DT_DEPAUDIT" entry in the output file.  This option is only meaningful on ELF platforms supporting the rtld-audit interface.
+
+       [1m-A [4m[22marchitecture[0m
+       [1m--architecture=[4m[22marchitecture[0m
+           In the current release of [1mld[22m, this option is useful only for the Intel 960 family of architectures.  In that [1mld [22mconfiguration, the [4marchitecture[24m argument identifies the particular architecture in
+           the 960 family, enabling some safeguards and modifying the archive-library search path.
+
+           Future releases of [1mld [22mmay support similar functionality for other architecture families.
+
+       [1m-b [4m[22minput-format[0m
+       [1m--format=[4m[22minput-format[0m
+           [1mld [22mmay be configured to support more than one kind of object file.  If your [1mld [22mis configured this way, you can use the [1m-b [22moption to specify the binary format for input object files that follow
+           this option on the command line.  Even when [1mld [22mis configured to support alternative object formats, you don't usually need to specify this, as [1mld [22mshould be configured to expect as a default
+           input format the most usual format on each machine.  [4minput-format[24m is a text string, the name of a particular format supported by the BFD libraries.  (You can list the available binary formats
+           with [1mobjdump -i[22m.)
+
+           You may want to use this option if you are linking files with an unusual binary format.  You can also use [1m-b [22mto switch formats explicitly (when linking object files of different formats), by
+           including [1m-b [4m[22minput-format[24m before each group of object files in a particular format.
+
+           The default format is taken from the environment variable "GNUTARGET".
+
+           You can also define the input format from a script, using the command "TARGET";
+
+       [1m-c [4m[22mMRI-commandfile[0m
+       [1m--mri-script=[4m[22mMRI-commandfile[0m
+           For compatibility with linkers produced by MRI, [1mld [22maccepts script files written in an alternate, restricted command language, described in the MRI Compatible Script Files section of GNU ld
+           documentation.  Introduce MRI script files with the option [1m-c[22m; use the [1m-T [22moption to run linker scripts written in the general-purpose [1mld [22mscripting language.  If [4mMRI-cmdfile[24m does not exist, [1mld[0m
+           looks for it in the directories specified by any [1m-L [22moptions.
+
+       [1m-d[0m
+       [1m-dc[0m
+       [1m-dp [22mThese three options are equivalent; multiple forms are supported for compatibility with other linkers.  They assign space to common symbols even if a relocatable output file is specified (with
+           [1m-r[22m).  The script command "FORCE_COMMON_ALLOCATION" has the same effect.
+
+       [1m--depaudit [4m[22mAUDITLIB[0m
+       [1m-P [4m[22mAUDITLIB[0m
+           Adds [4mAUDITLIB[24m to the "DT_DEPAUDIT" entry of the dynamic section.  [4mAUDITLIB[24m is not checked for existence, nor will it use the DT_SONAME specified in the library.  If specified multiple times
+           "DT_DEPAUDIT" will contain a colon separated list of audit interfaces to use.  This option is only meaningful on ELF platforms supporting the rtld-audit interface.  The -P option is provided for
+           Solaris compatibility.
+
+       [1m-e [4m[22mentry[0m
+       [1m--entry=[4m[22mentry[0m
+           Use [4mentry[24m as the explicit symbol for beginning execution of your program, rather than the default entry point.  If there is no symbol named [4mentry[24m, the linker will try to parse [4mentry[24m as a number,
+           and use that as the entry address (the number will be interpreted in base 10; you may use a leading [1m0x [22mfor base 16, or a leading [1m0 [22mfor base 8).
+
+       [1m--exclude-libs [4m[22mlib[24m[1m,[4m[22mlib[24m[1m,...[0m
+           Specifies a list of archive libraries from which symbols should not be automatically exported.  The library names may be delimited by commas or colons.  Specifying "--exclude-libs ALL" excludes
+           symbols in all archive libraries from automatic export.  This option is available only for the i386 PE targeted port of the linker and for ELF targeted ports.  For i386 PE, symbols explicitly
+           listed in a .def file are still exported, regardless of this option.  For ELF targeted ports, symbols affected by this option will be treated as hidden.
+
+       [1m--exclude-modules-for-implib [4m[22mmodule[24m[1m,[4m[22mmodule[24m[1m,...[0m
+           Specifies a list of object files or archive members, from which symbols should not be automatically exported, but which should be copied wholesale into the import library being generated during
+           the link.  The module names may be delimited by commas or colons, and must match exactly the filenames used by [1mld [22mto open the files; for archive members, this is simply the member name, but for
+           object files the name listed must include and match precisely any path used to specify the input file on the linker's command-line.  This option is available only for the i386 PE targeted port
+           of the linker.  Symbols explicitly listed in a .def file are still exported, regardless of this option.
+
+       [1m-E[0m
+       [1m--export-dynamic[0m
+       [1m--no-export-dynamic[0m
+           When creating a dynamically linked executable, using the [1m-E [22moption or the [1m--export-dynamic [22moption causes the linker to add all symbols to the dynamic symbol table.  The dynamic symbol table is
+           the set of symbols which are visible from dynamic objects at run time.
+
+           If you do not use either of these options (or use the [1m--no-export-dynamic [22moption to restore the default behavior), the dynamic symbol table will normally contain only those symbols which are
+           referenced by some dynamic object mentioned in the link.
+
+           If you use "dlopen" to load a dynamic object which needs to refer back to the symbols defined by the program, rather than some other dynamic object, then you will probably need to use this
+           option when linking the program itself.
+
+           You can also use the dynamic list to control what symbols should be added to the dynamic symbol table if the output format supports it.  See the description of [1m--dynamic-list[22m.
+
+           Note that this option is specific to ELF targeted ports.  PE targets support a similar function to export all symbols from a DLL or EXE; see the description of [1m--export-all-symbols [22mbelow.
+
+       [1m-EB [22mLink big-endian objects.  This affects the default output format.
+
+       [1m-EL [22mLink little-endian objects.  This affects the default output format.
+
+       [1m-f [4m[22mname[0m
+       [1m--auxiliary=[4m[22mname[0m
+           When creating an ELF shared object, set the internal DT_AUXILIARY field to the specified name.  This tells the dynamic linker that the symbol table of the shared object should be used as an
+           auxiliary filter on the symbol table of the shared object [4mname[24m.
+
+           If you later link a program against this filter object, then, when you run the program, the dynamic linker will see the DT_AUXILIARY field.  If the dynamic linker resolves any symbols from the
+           filter object, it will first check whether there is a definition in the shared object [4mname[24m.  If there is one, it will be used instead of the definition in the filter object.  The shared object
+           [4mname[24m need not exist.  Thus the shared object [4mname[24m may be used to provide an alternative implementation of certain functions, perhaps for debugging or for machine specific performance.
+
+           This option may be specified more than once.  The DT_AUXILIARY entries will be created in the order in which they appear on the command line.
+
+       [1m-F [4m[22mname[0m
+       [1m--filter=[4m[22mname[0m
+           When creating an ELF shared object, set the internal DT_FILTER field to the specified name.  This tells the dynamic linker that the symbol table of the shared object which is being created
+           should be used as a filter on the symbol table of the shared object [4mname[24m.
+
+           If you later link a program against this filter object, then, when you run the program, the dynamic linker will see the DT_FILTER field.  The dynamic linker will resolve symbols according to the
+           symbol table of the filter object as usual, but it will actually link to the definitions found in the shared object [4mname[24m.  Thus the filter object can be used to select a subset of the symbols
+           provided by the object [4mname[24m.
+
+           Some older linkers used the [1m-F [22moption throughout a compilation toolchain for specifying object-file format for both input and output object files.  The GNU linker uses other mechanisms for this
+           purpose: the [1m-b[22m, [1m--format[22m, [1m--oformat [22moptions, the "TARGET" command in linker scripts, and the "GNUTARGET" environment variable.  The GNU linker will ignore the [1m-F [22moption when not creating an ELF
+           shared object.
+
+       [1m-fini=[4m[22mname[0m
+           When creating an ELF executable or shared object, call NAME when the executable or shared object is unloaded, by setting DT_FINI to the address of the function.  By default, the linker uses
+           "_fini" as the function to call.
+
+       [1m-g  [22mIgnored.  Provided for compatibility with other tools.
+
+       [1m-G [4m[22mvalue[0m
+       [1m--gpsize=[4m[22mvalue[0m
+           Set the maximum size of objects to be optimized using the GP register to [4msize[24m.  This is only meaningful for object file formats such as MIPS ELF that support putting large and small objects into
+           different sections.  This is ignored for other object file formats.
+
+       [1m-h [4m[22mname[0m
+       [1m-soname=[4m[22mname[0m
+           When creating an ELF shared object, set the internal DT_SONAME field to the specified name.  When an executable is linked with a shared object which has a DT_SONAME field, then when the
+           executable is run the dynamic linker will attempt to load the shared object specified by the DT_SONAME field rather than the using the file name given to the linker.
+
+       [1m-i  [22mPerform an incremental link (same as option [1m-r[22m).
+
+       [1m-init=[4m[22mname[0m
+           When creating an ELF executable or shared object, call NAME when the executable or shared object is loaded, by setting DT_INIT to the address of the function.  By default, the linker uses
+           "_init" as the function to call.
+
+       [1m-l [4m[22mnamespec[0m
+       [1m--library=[4m[22mnamespec[0m
+           Add the archive or object file specified by [4mnamespec[24m to the list of files to link.  This option may be used any number of times.  If [4mnamespec[24m is of the form [4m:filename[24m, [1mld [22mwill search the library
+           path for a file called [4mfilename[24m, otherwise it will search the library path for a file called [4mlibnamespec.a[24m.
+
+           On systems which support shared libraries, [1mld [22mmay also search for files other than [4mlibnamespec.a[24m.  Specifically, on ELF and SunOS systems, [1mld [22mwill search a directory for a library called
+           [4mlibnamespec.so[24m before searching for one called [4mlibnamespec.a[24m.  (By convention, a ".so" extension indicates a shared library.)  Note that this behavior does not apply to [4m:filename[24m, which always
+           specifies a file called [4mfilename[24m.
+
+           The linker will search an archive only once, at the location where it is specified on the command line.  If the archive defines a symbol which was undefined in some object which appeared before
+           the archive on the command line, the linker will include the appropriate file(s) from the archive.  However, an undefined symbol in an object appearing later on the command line will not cause
+           the linker to search the archive again.
+
+           See the [1m-( [22moption for a way to force the linker to search archives multiple times.
+
+           You may list the same archive multiple times on the command line.
+
+           This type of archive searching is standard for Unix linkers.  However, if you are using [1mld [22mon AIX, note that it is different from the behaviour of the AIX linker.
+
+       [1m-L [4m[22msearchdir[0m
+       [1m--library-path=[4m[22msearchdir[0m
+           Add path [4msearchdir[24m to the list of paths that [1mld [22mwill search for archive libraries and [1mld [22mcontrol scripts.  You may use this option any number of times.  The directories are searched in the order
+           in which they are specified on the command line.  Directories specified on the command line are searched before the default directories.  All [1m-L [22moptions apply to all [1m-l [22moptions, regardless of
+           the order in which the options appear.  [1m-L [22moptions do not affect how [1mld [22msearches for a linker script unless [1m-T [22moption is specified.
+
+           If [4msearchdir[24m begins with "=" or $SYSROOT, then this prefix will be replaced by the [4msysroot[24m [4mprefix[24m, controlled by the [1m--sysroot [22moption, or specified when the linker is configured.
+
+           The default set of paths searched (without being specified with [1m-L[22m) depends on which emulation mode [1mld [22mis using, and in some cases also on how it was configured.
+
+           The paths can also be specified in a link script with the "SEARCH_DIR" command.  Directories specified this way are searched at the point in which the linker script appears in the command line.
+
+       [1m-m [4m[22memulation[0m
+           Emulate the [4memulation[24m linker.  You can list the available emulations with the [1m--verbose [22mor [1m-V [22moptions.
+
+           If the [1m-m [22moption is not used, the emulation is taken from the "LDEMULATION" environment variable, if that is defined.
+
+           Otherwise, the default emulation depends upon how the linker was configured.
+
+       [1m-M[0m
+       [1m--print-map[0m
+           Print a link map to the standard output.  A link map provides information about the link, including the following:
+
+           ·   Where object files are mapped into memory.
+
+           ·   How common symbols are allocated.
+
+           ·   All archive members included in the link, with a mention of the symbol which caused the archive member to be brought in.
+
+           ·   The values assigned to symbols.
+
+               Note - symbols whose values are computed by an expression which involves a reference to a previous value of the same symbol may not have correct result displayed in the link map.  This is
+               because the linker discards intermediate results and only retains the final value of an expression.  Under such circumstances the linker will display the final value enclosed by square
+               brackets.  Thus for example a linker script containing:
+
+                          foo = 1
+                          foo = foo * 4
+                          foo = foo + 8
+
+               will produce the following output in the link map if the [1m-M [22moption is used:
+
+                          0x00000001                foo = 0x1
+                          [0x0000000c]                foo = (foo * 0x4)
+                          [0x0000000c]                foo = (foo + 0x8)
+
+               See [1mExpressions [22mfor more information about expressions in linker scripts.
+
+       [1m-n[0m
+       [1m--nmagic[0m
+           Turn off page alignment of sections, and disable linking against shared libraries.  If the output format supports Unix style magic numbers, mark the output as "NMAGIC".
+
+       [1m-N[0m
+       [1m--omagic[0m
+           Set the text and data sections to be readable and writable.  Also, do not page-align the data segment, and disable linking against shared libraries.  If the output format supports Unix style
+           magic numbers, mark the output as "OMAGIC". Note: Although a writable text section is allowed for PE-COFF targets, it does not conform to the format specification published by Microsoft.
+
+       [1m--no-omagic[0m
+           This option negates most of the effects of the [1m-N [22moption.  It sets the text section to be read-only, and forces the data segment to be page-aligned.  Note - this option does not enable linking
+           against shared libraries.  Use [1m-Bdynamic [22mfor this.
+
+       [1m-o [4m[22moutput[0m
+       [1m--output=[4m[22moutput[0m
+           Use [4moutput[24m as the name for the program produced by [1mld[22m; if this option is not specified, the name [4ma.out[24m is used by default.  The script command "OUTPUT" can also specify the output file name.
+
+       [1m-O [4m[22mlevel[0m
+           If [4mlevel[24m is a numeric values greater than zero [1mld [22moptimizes the output.  This might take significantly longer and therefore probably should only be enabled for the final binary.  At the moment
+           this option only affects ELF shared library generation.  Future releases of the linker may make more use of this option.  Also currently there is no difference in the linker's behaviour for
+           different non-zero values of this option.  Again this may change with future releases.
+
+       [1m-plugin [4m[22mname[0m
+           Involve a plugin in the linking process.  The [4mname[24m parameter is the absolute filename of the plugin.  Usually this parameter is automatically added by the complier, when using link time
+           optimization, but users can also add their own plugins if they so wish.
+
+           Note that the location of the compiler originated plugins is different from the place where the [1mar[22m, [1mnm [22mand [1mranlib [22mprograms search for their plugins.  In order for those commands to make use of a
+           compiler based plugin it must first be copied into the [4m${libdir}/bfd-plugins[24m directory.  All gcc based linker plugins are backward compatible, so it is sufficient to just copy in the newest one.
+
+       [1m--push-state[0m
+           The [1m--push-state [22mallows to preserve the current state of the flags which govern the input file handling so that they can all be restored with one corresponding [1m--pop-state [22moption.
+
+           The option which are covered are: [1m-Bdynamic[22m, [1m-Bstatic[22m, [1m-dn[22m, [1m-dy[22m, [1m-call_shared[22m, [1m-non_shared[22m, [1m-static[22m, [1m-N[22m, [1m-n[22m, [1m--whole-archive[22m, [1m--no-whole-archive[22m, [1m-r[22m, [1m-Ur[22m, [1m--copy-dt-needed-entries[22m,
+           [1m--no-copy-dt-needed-entries[22m, [1m--as-needed[22m, [1m--no-as-needed[22m, and [1m-a[22m.
+
+           One target for this option are specifications for [4mpkg-config[24m.  When used with the [1m--libs [22moption all possibly needed libraries are listed and then possibly linked with all the time.  It is better
+           to return something as follows:
+
+                   -Wl,--push-state,--as-needed -libone -libtwo -Wl,--pop-state
+
+       [1m--pop-state[0m
+           Undoes the effect of --push-state, restores the previous values of the flags governing input file handling.
+
+       [1m-q[0m
+       [1m--emit-relocs[0m
+           Leave relocation sections and contents in fully linked executables.  Post link analysis and optimization tools may need this information in order to perform correct modifications of executables.
+           This results in larger executables.
+
+           This option is currently only supported on ELF platforms.
+
+       [1m--force-dynamic[0m
+           Force the output file to have dynamic sections.  This option is specific to VxWorks targets.
+
+       [1m-r[0m
+       [1m--relocatable[0m
+           Generate relocatable output---i.e., generate an output file that can in turn serve as input to [1mld[22m.  This is often called [4mpartial[24m [4mlinking[24m.  As a side effect, in environments that support standard
+           Unix magic numbers, this option also sets the output file's magic number to "OMAGIC".  If this option is not specified, an absolute file is produced.  When linking C++ programs, this option [4mwill[0m
+           [4mnot[24m resolve references to constructors; to do that, use [1m-Ur[22m.
+
+           When an input file does not have the same format as the output file, partial linking is only supported if that input file does not contain any relocations.  Different output formats can have
+           further restrictions; for example some "a.out"-based formats do not support partial linking with input files in other formats at all.
+
+           This option does the same thing as [1m-i[22m.
+
+       [1m-R [4m[22mfilename[0m
+       [1m--just-symbols=[4m[22mfilename[0m
+           Read symbol names and their addresses from [4mfilename[24m, but do not relocate it or include it in the output.  This allows your output file to refer symbolically to absolute locations of memory
+           defined in other programs.  You may use this option more than once.
+
+           For compatibility with other ELF linkers, if the [1m-R [22moption is followed by a directory name, rather than a file name, it is treated as the [1m-rpath [22moption.
+
+       [1m-s[0m
+       [1m--strip-all[0m
+           Omit all symbol information from the output file.
+
+       [1m-S[0m
+       [1m--strip-debug[0m
+           Omit debugger symbol information (but not all symbols) from the output file.
+
+       [1m--strip-discarded[0m
+       [1m--no-strip-discarded[0m
+           Omit (or do not omit) global symbols defined in discarded sections.  Enabled by default.
+
+       [1m-t[0m
+       [1m--trace[0m
+           Print the names of the input files as [1mld [22mprocesses them.
+
+       [1m-T [4m[22mscriptfile[0m
+       [1m--script=[4m[22mscriptfile[0m
+           Use [4mscriptfile[24m as the linker script.  This script replaces [1mld[22m's default linker script (rather than adding to it), so [4mcommandfile[24m must specify everything necessary to describe the output file.
+           If [4mscriptfile[24m does not exist in the current directory, "ld" looks for it in the directories specified by any preceding [1m-L [22moptions.  Multiple [1m-T [22moptions accumulate.
+
+       [1m-dT [4m[22mscriptfile[0m
+       [1m--default-script=[4m[22mscriptfile[0m
+           Use [4mscriptfile[24m as the default linker script.
+
+           This option is similar to the [1m--script [22moption except that processing of the script is delayed until after the rest of the command line has been processed.  This allows options placed after the
+           [1m--default-script [22moption on the command line to affect the behaviour of the linker script, which can be important when the linker command line cannot be directly controlled by the user.  (eg
+           because the command line is being constructed by another tool, such as [1mgcc[22m).
+
+       [1m-u [4m[22msymbol[0m
+       [1m--undefined=[4m[22msymbol[0m
+           Force [4msymbol[24m to be entered in the output file as an undefined symbol.  Doing this may, for example, trigger linking of additional modules from standard libraries.  [1m-u [22mmay be repeated with
+           different option arguments to enter additional undefined symbols.  This option is equivalent to the "EXTERN" linker script command.
+
+           If this option is being used to force additional modules to be pulled into the link, and if it is an error for the symbol to remain undefined, then the option [1m--require-defined [22mshould be used
+           instead.
+
+       [1m--require-defined=[4m[22msymbol[0m
+           Require that [4msymbol[24m is defined in the output file.  This option is the same as option [1m--undefined [22mexcept that if [4msymbol[24m is not defined in the output file then the linker will issue an error and
+           exit.  The same effect can be achieved in a linker script by using "EXTERN", "ASSERT" and "DEFINED" together.  This option can be used multiple times to require additional symbols.
+
+       [1m-Ur [22mFor anything other than C++ programs, this option is equivalent to [1m-r[22m: it generates relocatable output---i.e., an output file that can in turn serve as input to [1mld[22m.  When linking C++ programs,
+           [1m-Ur [4m[22mdoes[24m resolve references to constructors, unlike [1m-r[22m.  It does not work to use [1m-Ur [22mon files that were themselves linked with [1m-Ur[22m; once the constructor table has been built, it cannot be added
+           to.  Use [1m-Ur [22monly for the last partial link, and [1m-r [22mfor the others.
+
+       [1m--orphan-handling=[4m[22mMODE[0m
+           Control how orphan sections are handled.  An orphan section is one not specifically mentioned in a linker script.
+
+           [4mMODE[24m can have any of the following values:
+
+           "place"
+               Orphan sections are placed into a suitable output section following the strategy described in [1mOrphan Sections[22m.  The option [1m--unique [22malso affects how sections are placed.
+
+           "discard"
+               All orphan sections are discarded, by placing them in the [1m/DISCARD/ [22msection.
+
+           "warn"
+               The linker will place the orphan section as for "place" and also issue a warning.
+
+           "error"
+               The linker will exit with an error if any orphan section is found.
+
+           The default if [1m--orphan-handling [22mis not given is "place".
+
+       [1m--unique[=[4m[22mSECTION[24m[1m][0m
+           Creates a separate output section for every input section matching [4mSECTION[24m, or if the optional wildcard [4mSECTION[24m argument is missing, for every orphan input section.  An orphan section is one not
+           specifically mentioned in a linker script.  You may use this option multiple times on the command line;  It prevents the normal merging of input sections with the same name, overriding output
+           section assignments in a linker script.
+
+       [1m-v[0m
+       [1m--version[0m
+       [1m-V  [22mDisplay the version number for [1mld[22m.  The [1m-V [22moption also lists the supported emulations.
+
+       [1m-x[0m
+       [1m--discard-all[0m
+           Delete all local symbols.
+
+       [1m-X[0m
+       [1m--discard-locals[0m
+           Delete all temporary local symbols.  (These symbols start with system-specific local label prefixes, typically [1m.L [22mfor ELF systems or [1mL [22mfor traditional a.out systems.)
+
+       [1m-y [4m[22msymbol[0m
+       [1m--trace-symbol=[4m[22msymbol[0m
+           Print the name of each linked file in which [4msymbol[24m appears.  This option may be given any number of times.  On many systems it is necessary to prepend an underscore.
+
+           This option is useful when you have an undefined symbol in your link but don't know where the reference is coming from.
+
+       [1m-Y [4m[22mpath[0m
+           Add [4mpath[24m to the default library search path.  This option exists for Solaris compatibility.
+
+       [1m-z [4m[22mkeyword[0m
+           The recognized keywords are:
+
+           [1mbndplt[0m
+               Always generate BND prefix in PLT entries. Supported for Linux/x86_64.
+
+           [1mcall-nop=prefix-addr[0m
+           [1mcall-nop=suffix-nop[0m
+           [1mcall-nop=prefix-[4m[22mbyte[0m
+           [1mcall-nop=suffix-[4m[22mbyte[0m
+               Specify the 1-byte "NOP" padding when transforming indirect call to a locally defined function, foo, via its GOT slot.  [1mcall-nop=prefix-addr [22mgenerates "0x67 call foo".  [1mcall-nop=suffix-nop[0m
+               generates "call foo 0x90".  [1mcall-nop=prefix-[4m[22mbyte[24m generates "[4mbyte[24m [4mcall[24m [4mfoo"[24m.  [1mcall-nop=suffix-[4m[22mbyte[24m generates "call foo [4mbyte"[24m.  Supported for i386 and x86_64.
+
+           [1mcombreloc[0m
+           [1mnocombreloc[0m
+               Combine multiple dynamic relocation sections and sort to improve dynamic symbol lookup caching.  Do not do this if [1mnocombreloc[22m.
+
+           [1mcommon[0m
+           [1mnocommon[0m
+               Generate common symbols with STT_COMMON type during a relocatable link.  Use STT_OBJECT type if [1mnocommon[22m.
+
+           [1mcommon-page-size=[4m[22mvalue[0m
+               Set the page size most commonly used to [4mvalue[24m.  Memory image layout will be optimized to minimize memory pages if the system is using pages of this size.
+
+           [1mdefs[0m
+               Report unresolved symbol references from regular object files.  This is done even if the linker is creating a non-symbolic shared library.  This option is the inverse of [1m-z undefs[22m.
+
+           [1mdynamic-undefined-weak[0m
+           [1mnodynamic-undefined-weak[0m
+               Make undefined weak symbols dynamic when building a dynamic object, if they are referenced from a regular object file and not forced local by symbol visibility or versioning.  Do not make
+               them dynamic if [1mnodynamic-undefined-weak[22m.  If neither option is given, a target may default to either option being in force, or make some other selection of undefined weak symbols dynamic.
+               Not all targets support these options.
+
+           [1mexecstack[0m
+               Marks the object as requiring executable stack.
+
+           [1mglobal[0m
+               This option is only meaningful when building a shared object.  It makes the symbols defined by this shared object available for symbol resolution of subsequently loaded libraries.
+
+           [1mglobalaudit[0m
+               This option is only meaningful when building a dynamic executable.  This option marks the executable as requiring global auditing by setting the "DF_1_GLOBAUDIT" bit in the "DT_FLAGS_1"
+               dynamic tag.  Global auditing requires that any auditing library defined via the [1m--depaudit [22mor [1m-P [22mcommand line options be run for all dynamic objects loaded by the application.
+
+           [1mibtplt[0m
+               Generate Intel Indirect Branch Tracking (IBT) enabled PLT entries.  Supported for Linux/i386 and Linux/x86_64.
+
+           [1mibt [22mGenerate GNU_PROPERTY_X86_FEATURE_1_IBT in .note.gnu.property section to indicate compatibility with IBT.  This also implies [1mibtplt[22m.  Supported for Linux/i386 and Linux/x86_64.
+
+           [1minitfirst[0m
+               This option is only meaningful when building a shared object.  It marks the object so that its runtime initialization will occur before the runtime initialization of any other objects
+               brought into the process at the same time.  Similarly the runtime finalization of the object will occur after the runtime finalization of any other objects.
+
+           [1minterpose[0m
+               Specify that the dynamic loader should modify its symbol search order so that symbols in this shared library interpose all other shared libraries not so marked.
+
+           [1mlazy[0m
+               When generating an executable or shared library, mark it to tell the dynamic linker to defer function call resolution to the point when the function is called (lazy binding), rather than at
+               load time.  Lazy binding is the default.
+
+           [1mloadfltr[0m
+               Specify that the object's filters be processed immediately at runtime.
+
+           [1mmax-page-size=[4m[22mvalue[0m
+               Set the maximum memory page size supported to [4mvalue[24m.
+
+           [1mmuldefs[0m
+               Allow multiple definitions.
+
+           [1mnocopyreloc[0m
+               Disable linker generated .dynbss variables used in place of variables defined in shared libraries.  May result in dynamic text relocations.
+
+           [1mnodefaultlib[0m
+               Specify that the dynamic loader search for dependencies of this object should ignore any default library search paths.
+
+           [1mnodelete[0m
+               Specify that the object shouldn't be unloaded at runtime.
+
+           [1mnodlopen[0m
+               Specify that the object is not available to "dlopen".
+
+           [1mnodump[0m
+               Specify that the object can not be dumped by "dldump".
+
+           [1mnoexecstack[0m
+               Marks the object as not requiring executable stack.
+
+           [1mnoextern-protected-data[0m
+               Don't treat protected data symbols as external when building a shared library.  This option overrides the linker backend default.  It can be used to work around incorrect relocations against
+               protected data symbols generated by compiler.  Updates on protected data symbols by another module aren't visible to the resulting shared library.  Supported for i386 and x86-64.
+
+           [1mnoreloc-overflow[0m
+               Disable relocation overflow check.  This can be used to disable relocation overflow check if there will be no dynamic relocation overflow at run-time.  Supported for x86_64.
+
+           [1mnow [22mWhen generating an executable or shared library, mark it to tell the dynamic linker to resolve all symbols when the program is started, or when the shared library is loaded by dlopen,
+               instead of deferring function call resolution to the point when the function is first called.
+
+           [1morigin[0m
+               Specify that the object requires [1m$ORIGIN [22mhandling in paths.
+
+           [1mrelro[0m
+           [1mnorelro[0m
+               Create an ELF "PT_GNU_RELRO" segment header in the object.  This specifies a memory segment that should be made read-only after relocation, if supported.  Specifying [1mcommon-page-size [22msmaller
+               than the system page size will render this protection ineffective.  Don't create an ELF "PT_GNU_RELRO" segment if [1mnorelro[22m.
+
+           [1mseparate-code[0m
+           [1mnoseparate-code[0m
+               Create separate code "PT_LOAD" segment header in the object.  This specifies a memory segment that should contain only instructions and must be in wholly disjoint pages from any other data.
+               Don't create separate code "PT_LOAD" segment if [1mnoseparate-code [22mis used.
+
+           [1mshstk[0m
+               Generate GNU_PROPERTY_X86_FEATURE_1_SHSTK in .note.gnu.property section to indicate compatibility with Intel Shadow Stack.  Supported for Linux/i386 and Linux/x86_64.
+
+           [1mstack-size=[4m[22mvalue[0m
+               Specify a stack size for an ELF "PT_GNU_STACK" segment.  Specifying zero will override any default non-zero sized "PT_GNU_STACK" segment creation.
+
+           [1mtext[0m
+           [1mnotext[0m
+           [1mtextoff[0m
+               Report an error if DT_TEXTREL is set, i.e., if the binary has dynamic relocations in read-only sections.  Don't report an error if [1mnotext [22mor [1mtextoff[22m.
+
+           [1mundefs[0m
+               Do not report unresolved symbol references from regular object files, either when creating an executable, or when creating a shared library.  This option is the inverse of [1m-z defs[22m.
+
+           Other keywords are ignored for Solaris compatibility.
+
+       [1m-( [4m[22marchives[24m [1m-)[0m
+       [1m--start-group [4m[22marchives[24m [1m--end-group[0m
+           The [4marchives[24m should be a list of archive files.  They may be either explicit file names, or [1m-l [22moptions.
+
+           The specified archives are searched repeatedly until no new undefined references are created.  Normally, an archive is searched only once in the order that it is specified on the command line.
+           If a symbol in that archive is needed to resolve an undefined symbol referred to by an object in an archive that appears later on the command line, the linker would not be able to resolve that
+           reference.  By grouping the archives, they all be searched repeatedly until all possible references are resolved.
+
+           Using this option has a significant performance cost.  It is best to use it only when there are unavoidable circular references between two or more archives.
+
+       [1m--accept-unknown-input-arch[0m
+       [1m--no-accept-unknown-input-arch[0m
+           Tells the linker to accept input files whose architecture cannot be recognised.  The assumption is that the user knows what they are doing and deliberately wants to link in these unknown input
+           files.  This was the default behaviour of the linker, before release 2.14.  The default behaviour from release 2.14 onwards is to reject such input files, and so the [1m--accept-unknown-input-arch[0m
+           option has been added to restore the old behaviour.
+
+       [1m--as-needed[0m
+       [1m--no-as-needed[0m
+           This option affects ELF DT_NEEDED tags for dynamic libraries mentioned on the command line after the [1m--as-needed [22moption.  Normally the linker will add a DT_NEEDED tag for each dynamic library
+           mentioned on the command line, regardless of whether the library is actually needed or not.  [1m--as-needed [22mcauses a DT_NEEDED tag to only be emitted for a library that [4mat[24m [4mthat[24m [4mpoint[24m [4min[24m [4mthe[24m [4mlink[0m
+           satisfies a non-weak undefined symbol reference from a regular object file or, if the library is not found in the DT_NEEDED lists of other needed libraries, a non-weak undefined symbol reference
+           from another needed dynamic library.  Object files or libraries appearing on the command line [4mafter[24m the library in question do not affect whether the library is seen as needed.  This is similar
+           to the rules for extraction of object files from archives.  [1m--no-as-needed [22mrestores the default behaviour.
+
+       [1m--add-needed[0m
+       [1m--no-add-needed[0m
+           These two options have been deprecated because of the similarity of their names to the [1m--as-needed [22mand [1m--no-as-needed [22moptions.  They have been replaced by [1m--copy-dt-needed-entries [22mand
+           [1m--no-copy-dt-needed-entries[22m.
+
+       [1m-assert [4m[22mkeyword[0m
+           This option is ignored for SunOS compatibility.
+
+       [1m-Bdynamic[0m
+       [1m-dy[0m
+       [1m-call_shared[0m
+           Link against dynamic libraries.  This is only meaningful on platforms for which shared libraries are supported.  This option is normally the default on such platforms.  The different variants of
+           this option are for compatibility with various systems.  You may use this option multiple times on the command line: it affects library searching for [1m-l [22moptions which follow it.
+
+       [1m-Bgroup[0m
+           Set the "DF_1_GROUP" flag in the "DT_FLAGS_1" entry in the dynamic section.  This causes the runtime linker to handle lookups in this object and its dependencies to be performed only inside the
+           group.  [1m--unresolved-symbols=report-all [22mis implied.  This option is only meaningful on ELF platforms which support shared libraries.
+
+       [1m-Bstatic[0m
+       [1m-dn[0m
+       [1m-non_shared[0m
+       [1m-static[0m
+           Do not link against shared libraries.  This is only meaningful on platforms for which shared libraries are supported.  The different variants of this option are for compatibility with various
+           systems.  You may use this option multiple times on the command line: it affects library searching for [1m-l [22moptions which follow it.  This option also implies [1m--unresolved-symbols=report-all[22m.
+           This option can be used with [1m-shared[22m.  Doing so means that a shared library is being created but that all of the library's external references must be resolved by pulling in entries from static
+           libraries.
+
+       [1m-Bsymbolic[0m
+           When creating a shared library, bind references to global symbols to the definition within the shared library, if any.  Normally, it is possible for a program linked against a shared library to
+           override the definition within the shared library.  This option can also be used with the [1m--export-dynamic [22moption, when creating a position independent executable, to bind references to global
+           symbols to the definition within the executable.  This option is only meaningful on ELF platforms which support shared libraries and position independent executables.
+
+       [1m-Bsymbolic-functions[0m
+           When creating a shared library, bind references to global function symbols to the definition within the shared library, if any.  This option can also be used with the [1m--export-dynamic [22moption,
+           when creating a position independent executable, to bind references to global function symbols to the definition within the executable.  This option is only meaningful on ELF platforms which
+           support shared libraries and position independent executables.
+
+       [1m--dynamic-list=[4m[22mdynamic-list-file[0m
+           Specify the name of a dynamic list file to the linker.  This is typically used when creating shared libraries to specify a list of global symbols whose references shouldn't be bound to the
+           definition within the shared library, or creating dynamically linked executables to specify a list of symbols which should be added to the symbol table in the executable.  This option is only
+           meaningful on ELF platforms which support shared libraries.
+
+           The format of the dynamic list is the same as the version node without scope and node name.  See [1mVERSION [22mfor more information.
+
+       [1m--dynamic-list-data[0m
+           Include all global data symbols to the dynamic list.
+
+       [1m--dynamic-list-cpp-new[0m
+           Provide the builtin dynamic list for C++ operator new and delete.  It is mainly useful for building shared libstdc++.
+
+       [1m--dynamic-list-cpp-typeinfo[0m
+           Provide the builtin dynamic list for C++ runtime type identification.
+
+       [1m--check-sections[0m
+       [1m--no-check-sections[0m
+           Asks the linker [4mnot[24m to check section addresses after they have been assigned to see if there are any overlaps.  Normally the linker will perform this check, and if it finds any overlaps it will
+           produce suitable error messages.  The linker does know about, and does make allowances for sections in overlays.  The default behaviour can be restored by using the command line switch
+           [1m--check-sections[22m.  Section overlap is not usually checked for relocatable links.  You can force checking in that case by using the [1m--check-sections [22moption.
+
+       [1m--copy-dt-needed-entries[0m
+       [1m--no-copy-dt-needed-entries[0m
+           This option affects the treatment of dynamic libraries referred to by DT_NEEDED tags [4minside[24m ELF dynamic libraries mentioned on the command line.  Normally the linker won't add a DT_NEEDED tag to
+           the output binary for each library mentioned in a DT_NEEDED tag in an input dynamic library.  With [1m--copy-dt-needed-entries [22mspecified on the command line however any dynamic libraries that
+           follow it will have their DT_NEEDED entries added.  The default behaviour can be restored with [1m--no-copy-dt-needed-entries[22m.
+
+           This option also has an effect on the resolution of symbols in dynamic libraries.  With [1m--copy-dt-needed-entries [22mdynamic libraries mentioned on the command line will be recursively searched,
+           following their DT_NEEDED tags to other libraries, in order to resolve symbols required by the output binary.  With the default setting however the searching of dynamic libraries that follow it
+           will stop with the dynamic library itself.  No DT_NEEDED links will be traversed to resolve symbols.
+
+       [1m--cref[0m
+           Output a cross reference table.  If a linker map file is being generated, the cross reference table is printed to the map file.  Otherwise, it is printed on the standard output.
+
+           The format of the table is intentionally simple, so that it may be easily processed by a script if necessary.  The symbols are printed out, sorted by name.  For each symbol, a list of file names
+           is given.  If the symbol is defined, the first file listed is the location of the definition.  If the symbol is defined as a common value then any files where this happens appear next.  Finally
+           any files that reference the symbol are listed.
+
+       [1m--no-define-common[0m
+           This option inhibits the assignment of addresses to common symbols.  The script command "INHIBIT_COMMON_ALLOCATION" has the same effect.
+
+           The [1m--no-define-common [22moption allows decoupling the decision to assign addresses to Common symbols from the choice of the output file type; otherwise a non-Relocatable output type forces
+           assigning addresses to Common symbols.  Using [1m--no-define-common [22mallows Common symbols that are referenced from a shared library to be assigned addresses only in the main program.  This
+           eliminates the unused duplicate space in the shared library, and also prevents any possible confusion over resolving to the wrong duplicate when there are many dynamic modules with specialized
+           search paths for runtime symbol resolution.
+
+       [1m--force-group-allocation[0m
+           This option causes the linker to place section group members like normal input sections, and to delete the section groups.  This is the default behaviour for a final link but this option can be
+           used to change the behaviour of a relocatable link ([1m-r[22m).  The script command "FORCE_GROUP_ALLOCATION" has the same effect.
+
+       [1m--defsym=[4m[22msymbol[24m[1m=[4m[22mexpression[0m
+           Create a global symbol in the output file, containing the absolute address given by [4mexpression[24m.  You may use this option as many times as necessary to define multiple symbols in the command
+           line.  A limited form of arithmetic is supported for the [4mexpression[24m in this context: you may give a hexadecimal constant or the name of an existing symbol, or use "+" and "-" to add or subtract
+           hexadecimal constants or symbols.  If you need more elaborate expressions, consider using the linker command language from a script.  [4mNote:[24m there should be no white space between [4msymbol[24m, the
+           equals sign ("[1m=[22m"), and [4mexpression[24m.
+
+       [1m--demangle[=[4m[22mstyle[24m[1m][0m
+       [1m--no-demangle[0m
+           These options control whether to demangle symbol names in error messages and other output.  When the linker is told to demangle, it tries to present symbol names in a readable fashion: it strips
+           leading underscores if they are used by the object file format, and converts C++ mangled symbol names into user readable names.  Different compilers have different mangling styles.  The optional
+           demangling style argument can be used to choose an appropriate demangling style for your compiler.  The linker will demangle by default unless the environment variable [1mCOLLECT_NO_DEMANGLE [22mis
+           set.  These options may be used to override the default.
+
+       [1m-I[4m[22mfile[0m
+       [1m--dynamic-linker=[4m[22mfile[0m
+           Set the name of the dynamic linker.  This is only meaningful when generating dynamically linked ELF executables.  The default dynamic linker is normally correct; don't use this unless you know
+           what you are doing.
+
+       [1m--no-dynamic-linker[0m
+           When producing an executable file, omit the request for a dynamic linker to be used at load-time.  This is only meaningful for ELF executables that contain dynamic relocations, and usually
+           requires entry point code that is capable of processing these relocations.
+
+       [1m--embedded-relocs[0m
+           This option is similar to the [1m--emit-relocs [22moption except that the relocs are stored in a target specific section.  This option is only supported by the [1mBFIN[22m, [1mCR16 [22mand [4mM68K[24m targets.
+
+       [1m--fatal-warnings[0m
+       [1m--no-fatal-warnings[0m
+           Treat all warnings as errors.  The default behaviour can be restored with the option [1m--no-fatal-warnings[22m.
+
+       [1m--force-exe-suffix[0m
+           Make sure that an output file has a .exe suffix.
+
+           If a successfully built fully linked output file does not have a ".exe" or ".dll" suffix, this option forces the linker to copy the output file to one of the same name with a ".exe" suffix. This
+           option is useful when using unmodified Unix makefiles on a Microsoft Windows host, since some versions of Windows won't run an image unless it ends in a ".exe" suffix.
+
+       [1m--gc-sections[0m
+       [1m--no-gc-sections[0m
+           Enable garbage collection of unused input sections.  It is ignored on targets that do not support this option.  The default behaviour (of not performing this garbage collection) can be restored
+           by specifying [1m--no-gc-sections [22mon the command line.  Note that garbage collection for COFF and PE format targets is supported, but the implementation is currently considered to be experimental.
+
+           [1m--gc-sections [22mdecides which input sections are used by examining symbols and relocations.  The section containing the entry symbol and all sections containing symbols undefined on the command-
+           line will be kept, as will sections containing symbols referenced by dynamic objects.  Note that when building shared libraries, the linker must assume that any visible symbol is referenced.
+           Once this initial set of sections has been determined, the linker recursively marks as used any section referenced by their relocations.  See [1m--entry [22mand [1m--undefined[22m.
+
+           This option can be set when doing a partial link (enabled with option [1m-r[22m).  In this case the root of symbols kept must be explicitly specified either by an [1m--entry [22mor [1m--undefined [22moption or by a
+           "ENTRY" command in the linker script.
+
+       [1m--print-gc-sections[0m
+       [1m--no-print-gc-sections[0m
+           List all sections removed by garbage collection.  The listing is printed on stderr.  This option is only effective if garbage collection has been enabled via the [1m--gc-sections[22m) option.  The
+           default behaviour (of not listing the sections that are removed) can be restored by specifying [1m--no-print-gc-sections [22mon the command line.
+
+       [1m--gc-keep-exported[0m
+           When [1m--gc-sections [22mis enabled, this option prevents garbage collection of unused input sections that contain global symbols having default or protected visibility.  This option is intended to be
+           used for executables where unreferenced sections would otherwise be garbage collected regardless of the external visibility of contained symbols.  Note that this option has no effect when
+           linking shared objects since it is already the default behaviour.  This option is only supported for ELF format targets.
+
+       [1m--print-output-format[0m
+           Print the name of the default output format (perhaps influenced by other command-line options).  This is the string that would appear in an "OUTPUT_FORMAT" linker script command.
+
+       [1m--print-memory-usage[0m
+           Print used size, total size and used size of memory regions created with the [1mMEMORY [22mcommand.  This is useful on embedded targets to have a quick view of amount of free memory.  The format of the
+           output has one headline and one line per region.  It is both human readable and easily parsable by tools.  Here is an example of an output:
+
+                   Memory region         Used Size  Region Size  %age Used
+                                ROM:        256 KB         1 MB     25.00%
+                                RAM:          32 B         2 GB      0.00%
+
+       [1m--help[0m
+           Print a summary of the command-line options on the standard output and exit.
+
+       [1m--target-help[0m
+           Print a summary of all target specific options on the standard output and exit.
+
+       [1m-Map=[4m[22mmapfile[0m
+           Print a link map to the file [4mmapfile[24m.  See the description of the [1m-M [22moption, above.
+
+       [1m--no-keep-memory[0m
+           [1mld [22mnormally optimizes for speed over memory usage by caching the symbol tables of input files in memory.  This option tells [1mld [22mto instead optimize for memory usage, by rereading the symbol
+           tables as necessary.  This may be required if [1mld [22mruns out of memory space while linking a large executable.
+
+       [1m--no-undefined[0m
+       [1m-z defs[0m
+           Report unresolved symbol references from regular object files.  This is done even if the linker is creating a non-symbolic shared library.  The switch [1m--[no-]allow-shlib-undefined [22mcontrols the
+           behaviour for reporting unresolved references found in shared libraries being linked in.
+
+           The effects of this option can be reverted by using "-z undefs".
+
+       [1m--allow-multiple-definition[0m
+       [1m-z muldefs[0m
+           Normally when a symbol is defined multiple times, the linker will report a fatal error. These options allow multiple definitions and the first definition will be used.
+
+       [1m--allow-shlib-undefined[0m
+       [1m--no-allow-shlib-undefined[0m
+           Allows or disallows undefined symbols in shared libraries.  This switch is similar to [1m--no-undefined [22mexcept that it determines the behaviour when the undefined symbols are in a shared library
+           rather than a regular object file.  It does not affect how undefined symbols in regular object files are handled.
+
+           The default behaviour is to report errors for any undefined symbols referenced in shared libraries if the linker is being used to create an executable, but to allow them if the linker is being
+           used to create a shared library.
+
+           The reasons for allowing undefined symbol references in shared libraries specified at link time are that:
+
+           ·   A shared library specified at link time may not be the same as the one that is available at load time, so the symbol might actually be resolvable at load time.
+
+           ·   There are some operating systems, eg BeOS and HPPA, where undefined symbols in shared libraries are normal.
+
+               The BeOS kernel for example patches shared libraries at load time to select whichever function is most appropriate for the current architecture.  This is used, for example, to dynamically
+               select an appropriate memset function.
+
+       [1m--no-undefined-version[0m
+           Normally when a symbol has an undefined version, the linker will ignore it. This option disallows symbols with undefined version and a fatal error will be issued instead.
+
+       [1m--default-symver[0m
+           Create and use a default symbol version (the soname) for unversioned exported symbols.
+
+       [1m--default-imported-symver[0m
+           Create and use a default symbol version (the soname) for unversioned imported symbols.
+
+       [1m--no-warn-mismatch[0m
+           Normally [1mld [22mwill give an error if you try to link together input files that are mismatched for some reason, perhaps because they have been compiled for different processors or for different
+           endiannesses.  This option tells [1mld [22mthat it should silently permit such possible errors.  This option should only be used with care, in cases when you have taken some special action that ensures
+           that the linker errors are inappropriate.
+
+       [1m--no-warn-search-mismatch[0m
+           Normally [1mld [22mwill give a warning if it finds an incompatible library during a library search.  This option silences the warning.
+
+       [1m--no-whole-archive[0m
+           Turn off the effect of the [1m--whole-archive [22moption for subsequent archive files.
+
+       [1m--noinhibit-exec[0m
+           Retain the executable output file whenever it is still usable.  Normally, the linker will not produce an output file if it encounters errors during the link process; it exits without writing an
+           output file when it issues any error whatsoever.
+
+       [1m-nostdlib[0m
+           Only search library directories explicitly specified on the command line.  Library directories specified in linker scripts (including linker scripts specified on the command line) are ignored.
+
+       [1m--oformat=[4m[22moutput-format[0m
+           [1mld [22mmay be configured to support more than one kind of object file.  If your [1mld [22mis configured this way, you can use the [1m--oformat [22moption to specify the binary format for the output object file.
+           Even when [1mld [22mis configured to support alternative object formats, you don't usually need to specify this, as [1mld [22mshould be configured to produce as a default output format the most usual format
+           on each machine.  [4moutput-format[24m is a text string, the name of a particular format supported by the BFD libraries.  (You can list the available binary formats with [1mobjdump -i[22m.)  The script
+           command "OUTPUT_FORMAT" can also specify the output format, but this option overrides it.
+
+       [1m--out-implib [4m[22mfile[0m
+           Create an import library in [4mfile[24m corresponding to the executable the linker is generating (eg. a DLL or ELF program).  This import library (which should be called "*.dll.a" or "*.a" for DLLs)
+           may be used to link clients against the generated executable; this behaviour makes it possible to skip a separate import library creation step (eg. "dlltool" for DLLs).  This option is only
+           available for the i386 PE and ELF targetted ports of the linker.
+
+       [1m-pie[0m
+       [1m--pic-executable[0m
+           Create a position independent executable.  This is currently only supported on ELF platforms.  Position independent executables are similar to shared libraries in that they are relocated by the
+           dynamic linker to the virtual address the OS chooses for them (which can vary between invocations).  Like normal dynamically linked executables they can be executed and symbols defined in the
+           executable cannot be overridden by shared libraries.
+
+       [1m-qmagic[0m
+           This option is ignored for Linux compatibility.
+
+       [1m-Qy [22mThis option is ignored for SVR4 compatibility.
+
+       [1m--relax[0m
+       [1m--no-relax[0m
+           An option with machine dependent effects.  This option is only supported on a few targets.
+
+           On some platforms the [1m--relax [22moption performs target specific, global optimizations that become possible when the linker resolves addressing in the program, such as relaxing address modes,
+           synthesizing new instructions, selecting shorter version of current instructions, and combining constant values.
+
+           On some platforms these link time global optimizations may make symbolic debugging of the resulting executable impossible.  This is known to be the case for the Matsushita MN10200 and MN10300
+           family of processors.
+
+           On platforms where this is not supported, [1m--relax [22mis accepted, but ignored.
+
+           On platforms where [1m--relax [22mis accepted the option [1m--no-relax [22mcan be used to disable the feature.
+
+       [1m--retain-symbols-file=[4m[22mfilename[0m
+           Retain [4monly[24m the symbols listed in the file [4mfilename[24m, discarding all others.  [4mfilename[24m is simply a flat file, with one symbol name per line.  This option is especially useful in environments
+           (such as VxWorks) where a large global symbol table is accumulated gradually, to conserve run-time memory.
+
+           [1m--retain-symbols-file [22mdoes [4mnot[24m discard undefined symbols, or symbols needed for relocations.
+
+           You may only specify [1m--retain-symbols-file [22monce in the command line.  It overrides [1m-s [22mand [1m-S[22m.
+
+       [1m-rpath=[4m[22mdir[0m
+           Add a directory to the runtime library search path.  This is used when linking an ELF executable with shared objects.  All [1m-rpath [22marguments are concatenated and passed to the runtime linker,
+           which uses them to locate shared objects at runtime.  The [1m-rpath [22moption is also used when locating shared objects which are needed by shared objects explicitly included in the link; see the
+           description of the [1m-rpath-link [22moption.  If [1m-rpath [22mis not used when linking an ELF executable, the contents of the environment variable "LD_RUN_PATH" will be used if it is defined.
+
+           The [1m-rpath [22moption may also be used on SunOS.  By default, on SunOS, the linker will form a runtime search path out of all the [1m-L [22moptions it is given.  If a [1m-rpath [22moption is used, the runtime
+           search path will be formed exclusively using the [1m-rpath [22moptions, ignoring the [1m-L [22moptions.  This can be useful when using gcc, which adds many [1m-L [22moptions which may be on NFS mounted file systems.
+
+           For compatibility with other ELF linkers, if the [1m-R [22moption is followed by a directory name, rather than a file name, it is treated as the [1m-rpath [22moption.
+
+       [1m-rpath-link=[4m[22mdir[0m
+           When using ELF or SunOS, one shared library may require another.  This happens when an "ld -shared" link includes a shared library as one of the input files.
+
+           When the linker encounters such a dependency when doing a non-shared, non-relocatable link, it will automatically try to locate the required shared library and include it in the link, if it is
+           not included explicitly.  In such a case, the [1m-rpath-link [22moption specifies the first set of directories to search.  The [1m-rpath-link [22moption may specify a sequence of directory names either by
+           specifying a list of names separated by colons, or by appearing multiple times.
+
+           The tokens [4m$ORIGIN[24m and [4m$LIB[24m can appear in these search directories.  They will be replaced by the full path to the directory containing the program or shared object in the case of [4m$ORIGIN[24m and
+           either [1mlib [22m- for 32-bit binaries - or [1mlib64 [22m- for 64-bit binaries - in the case of [4m$LIB[24m.
+
+           The alternative form of these tokens - [4m${ORIGIN}[24m and [4m${LIB}[24m can also be used.  The token [4m$PLATFORM[24m is not supported.
+
+           This option should be used with caution as it overrides the search path that may have been hard compiled into a shared library. In such a case it is possible to use unintentionally a different
+           search path than the runtime linker would do.
+
+           The linker uses the following search paths to locate required shared libraries:
+
+           1.  Any directories specified by [1m-rpath-link [22moptions.
+
+           2.  Any directories specified by [1m-rpath [22moptions.  The difference between [1m-rpath [22mand [1m-rpath-link [22mis that directories specified by [1m-rpath [22moptions are included in the executable and used at
+               runtime, whereas the [1m-rpath-link [22moption is only effective at link time. Searching [1m-rpath [22min this way is only supported by native linkers and cross linkers which have been configured with the
+               [1m--with-sysroot [22moption.
+
+           3.  On an ELF system, for native linkers, if the [1m-rpath [22mand [1m-rpath-link [22moptions were not used, search the contents of the environment variable "LD_RUN_PATH".
+
+           4.  On SunOS, if the [1m-rpath [22moption was not used, search any directories specified using [1m-L [22moptions.
+
+           5.  For a native linker, search the contents of the environment variable "LD_LIBRARY_PATH".
+
+           6.  For a native ELF linker, the directories in "DT_RUNPATH" or "DT_RPATH" of a shared library are searched for shared libraries needed by it. The "DT_RPATH" entries are ignored if "DT_RUNPATH"
+               entries exist.
+
+           7.  The default directories, normally [4m/lib[24m and [4m/usr/lib[24m.
+
+           8.  For a native linker on an ELF system, if the file [4m/etc/ld.so.conf[24m exists, the list of directories found in that file.
+
+           If the required shared library is not found, the linker will issue a warning and continue with the link.
+
+       [1m-shared[0m
+       [1m-Bshareable[0m
+           Create a shared library.  This is currently only supported on ELF, XCOFF and SunOS platforms.  On SunOS, the linker will automatically create a shared library if the [1m-e [22moption is not used and
+           there are undefined symbols in the link.
+
+       [1m--sort-common[0m
+       [1m--sort-common=ascending[0m
+       [1m--sort-common=descending[0m
+           This option tells [1mld [22mto sort the common symbols by alignment in ascending or descending order when it places them in the appropriate output sections.  The symbol alignments considered are
+           sixteen-byte or larger, eight-byte, four-byte, two-byte, and one-byte. This is to prevent gaps between symbols due to alignment constraints.  If no sorting order is specified, then descending
+           order is assumed.
+
+       [1m--sort-section=name[0m
+           This option will apply "SORT_BY_NAME" to all wildcard section patterns in the linker script.
+
+       [1m--sort-section=alignment[0m
+           This option will apply "SORT_BY_ALIGNMENT" to all wildcard section patterns in the linker script.
+
+       [1m--spare-dynamic-tags=[4m[22mcount[0m
+           This option specifies the number of empty slots to leave in the .dynamic section of ELF shared objects.  Empty slots may be needed by post processing tools, such as the prelinker.  The default
+           is 5.
+
+       [1m--split-by-file[=[4m[22msize[24m[1m][0m
+           Similar to [1m--split-by-reloc [22mbut creates a new output section for each input file when [4msize[24m is reached.  [4msize[24m defaults to a size of 1 if not given.
+
+       [1m--split-by-reloc[=[4m[22mcount[24m[1m][0m
+           Tries to creates extra sections in the output file so that no single output section in the file contains more than [4mcount[24m relocations.  This is useful when generating huge relocatable files for
+           downloading into certain real time kernels with the COFF object file format; since COFF cannot represent more than 65535 relocations in a single section.  Note that this will fail to work with
+           object file formats which do not support arbitrary sections.  The linker will not split up individual input sections for redistribution, so if a single input section contains more than [4mcount[0m
+           relocations one output section will contain that many relocations.  [4mcount[24m defaults to a value of 32768.
+
+       [1m--stats[0m
+           Compute and display statistics about the operation of the linker, such as execution time and memory usage.
+
+       [1m--sysroot=[4m[22mdirectory[0m
+           Use [4mdirectory[24m as the location of the sysroot, overriding the configure-time default.  This option is only supported by linkers that were configured using [1m--with-sysroot[22m.
+
+       [1m--task-link[0m
+           This is used by COFF/PE based targets to create a task-linked object file where all of the global symbols have been converted to statics.
+
+       [1m--traditional-format[0m
+           For some targets, the output of [1mld [22mis different in some ways from the output of some existing linker.  This switch requests [1mld [22mto use the traditional format instead.
+
+           For example, on SunOS, [1mld [22mcombines duplicate entries in the symbol string table.  This can reduce the size of an output file with full debugging information by over 30 percent.  Unfortunately,
+           the SunOS "dbx" program can not read the resulting program ("gdb" has no trouble).  The [1m--traditional-format [22mswitch tells [1mld [22mto not combine duplicate entries.
+
+       [1m--section-start=[4m[22msectionname[24m[1m=[4m[22morg[0m
+           Locate a section in the output file at the absolute address given by [4morg[24m.  You may use this option as many times as necessary to locate multiple sections in the command line.  [4morg[24m must be a
+           single hexadecimal integer; for compatibility with other linkers, you may omit the leading [1m0x [22musually associated with hexadecimal values.  [4mNote:[24m there should be no white space between
+           [4msectionname[24m, the equals sign ("[1m=[22m"), and [4morg[24m.
+
+       [1m-Tbss=[4m[22morg[0m
+       [1m-Tdata=[4m[22morg[0m
+       [1m-Ttext=[4m[22morg[0m
+           Same as [1m--section-start[22m, with ".bss", ".data" or ".text" as the [4msectionname[24m.
+
+       [1m-Ttext-segment=[4m[22morg[0m
+           When creating an ELF executable, it will set the address of the first byte of the text segment.
+
+       [1m-Trodata-segment=[4m[22morg[0m
+           When creating an ELF executable or shared object for a target where the read-only data is in its own segment separate from the executable text, it will set the address of the first byte of the
+           read-only data segment.
+
+       [1m-Tldata-segment=[4m[22morg[0m
+           When creating an ELF executable or shared object for x86-64 medium memory model, it will set the address of the first byte of the ldata segment.
+
+       [1m--unresolved-symbols=[4m[22mmethod[0m
+           Determine how to handle unresolved symbols.  There are four possible values for [1mmethod[22m:
+
+           [1mignore-all[0m
+               Do not report any unresolved symbols.
+
+           [1mreport-all[0m
+               Report all unresolved symbols.  This is the default.
+
+           [1mignore-in-object-files[0m
+               Report unresolved symbols that are contained in shared libraries, but ignore them if they come from regular object files.
+
+           [1mignore-in-shared-libs[0m
+               Report unresolved symbols that come from regular object files, but ignore them if they come from shared libraries.  This can be useful when creating a dynamic binary and it is known that all
+               the shared libraries that it should be referencing are included on the linker's command line.
+
+           The behaviour for shared libraries on their own can also be controlled by the [1m--[no-]allow-shlib-undefined [22moption.
+
+           Normally the linker will generate an error message for each reported unresolved symbol but the option [1m--warn-unresolved-symbols [22mcan change this to a warning.
+
+       [1m--dll-verbose[0m
+       [1m--verbose[=[4m[22mNUMBER[24m[1m][0m
+           Display the version number for [1mld [22mand list the linker emulations supported.  Display which input files can and cannot be opened.  Display the linker script being used by the linker. If the
+           optional [4mNUMBER[24m argument > 1, plugin symbol status will also be displayed.
+
+       [1m--version-script=[4m[22mversion-scriptfile[0m
+           Specify the name of a version script to the linker.  This is typically used when creating shared libraries to specify additional information about the version hierarchy for the library being
+           created.  This option is only fully supported on ELF platforms which support shared libraries; see [1mVERSION[22m.  It is partially supported on PE platforms, which can use version scripts to filter
+           symbol visibility in auto-export mode: any symbols marked [1mlocal [22min the version script will not be exported.
+
+       [1m--warn-common[0m
+           Warn when a common symbol is combined with another common symbol or with a symbol definition.  Unix linkers allow this somewhat sloppy practice, but linkers on some other operating systems do
+           not.  This option allows you to find potential problems from combining global symbols.  Unfortunately, some C libraries use this practice, so you may get some warnings about symbols in the
+           libraries as well as in your programs.
+
+           There are three kinds of global symbols, illustrated here by C examples:
+
+           [1mint i = 1;[0m
+               A definition, which goes in the initialized data section of the output file.
+
+           [1mextern int i;[0m
+               An undefined reference, which does not allocate space.  There must be either a definition or a common symbol for the variable somewhere.
+
+           [1mint i;[0m
+               A common symbol.  If there are only (one or more) common symbols for a variable, it goes in the uninitialized data area of the output file.  The linker merges multiple common symbols for the
+               same variable into a single symbol.  If they are of different sizes, it picks the largest size.  The linker turns a common symbol into a declaration, if there is a definition of the same
+               variable.
+
+           The [1m--warn-common [22moption can produce five kinds of warnings.  Each warning consists of a pair of lines: the first describes the symbol just encountered, and the second describes the previous
+           symbol encountered with the same name.  One or both of the two symbols will be a common symbol.
+
+           1.  Turning a common symbol into a reference, because there is already a definition for the symbol.
+
+                       <file>(<section>): warning: common of `<symbol>'
+                          overridden by definition
+                       <file>(<section>): warning: defined here
+
+           2.  Turning a common symbol into a reference, because a later definition for the symbol is encountered.  This is the same as the previous case, except that the symbols are encountered in a
+               different order.
+
+                       <file>(<section>): warning: definition of `<symbol>'
+                          overriding common
+                       <file>(<section>): warning: common is here
+
+           3.  Merging a common symbol with a previous same-sized common symbol.
+
+                       <file>(<section>): warning: multiple common
+                          of `<symbol>'
+                       <file>(<section>): warning: previous common is here
+
+           4.  Merging a common symbol with a previous larger common symbol.
+
+                       <file>(<section>): warning: common of `<symbol>'
+                          overridden by larger common
+                       <file>(<section>): warning: larger common is here
+
+           5.  Merging a common symbol with a previous smaller common symbol.  This is the same as the previous case, except that the symbols are encountered in a different order.
+
+                       <file>(<section>): warning: common of `<symbol>'
+                          overriding smaller common
+                       <file>(<section>): warning: smaller common is here
+
+       [1m--warn-constructors[0m
+           Warn if any global constructors are used.  This is only useful for a few object file formats.  For formats like COFF or ELF, the linker can not detect the use of global constructors.
+
+       [1m--warn-multiple-gp[0m
+           Warn if multiple global pointer values are required in the output file.  This is only meaningful for certain processors, such as the Alpha.  Specifically, some processors put large-valued
+           constants in a special section.  A special register (the global pointer) points into the middle of this section, so that constants can be loaded efficiently via a base-register relative
+           addressing mode.  Since the offset in base-register relative mode is fixed and relatively small (e.g., 16 bits), this limits the maximum size of the constant pool.  Thus, in large programs, it
+           is often necessary to use multiple global pointer values in order to be able to address all possible constants.  This option causes a warning to be issued whenever this case occurs.
+
+       [1m--warn-once[0m
+           Only warn once for each undefined symbol, rather than once per module which refers to it.
+
+       [1m--warn-section-align[0m
+           Warn if the address of an output section is changed because of alignment.  Typically, the alignment will be set by an input section.  The address will only be changed if it not explicitly
+           specified; that is, if the "SECTIONS" command does not specify a start address for the section.
+
+       [1m--warn-shared-textrel[0m
+           Warn if the linker adds a DT_TEXTREL to a shared object.
+
+       [1m--warn-alternate-em[0m
+           Warn if an object has alternate ELF machine code.
+
+       [1m--warn-unresolved-symbols[0m
+           If the linker is going to report an unresolved symbol (see the option [1m--unresolved-symbols[22m) it will normally generate an error.  This option makes it generate a warning instead.
+
+       [1m--error-unresolved-symbols[0m
+           This restores the linker's default behaviour of generating errors when it is reporting unresolved symbols.
+
+       [1m--whole-archive[0m
+           For each archive mentioned on the command line after the [1m--whole-archive [22moption, include every object file in the archive in the link, rather than searching the archive for the required object
+           files.  This is normally used to turn an archive file into a shared library, forcing every object to be included in the resulting shared library.  This option may be used more than once.
+
+           Two notes when using this option from gcc: First, gcc doesn't know about this option, so you have to use [1m-Wl,-whole-archive[22m.  Second, don't forget to use [1m-Wl,-no-whole-archive [22mafter your list of
+           archives, because gcc will add its own list of archives to your link and you may not want this flag to affect those as well.
+
+       [1m--wrap=[4m[22msymbol[0m
+           Use a wrapper function for [4msymbol[24m.  Any undefined reference to [4msymbol[24m will be resolved to "__wrap_[4msymbol"[24m.  Any undefined reference to "__real_[4msymbol"[24m will be resolved to [4msymbol[24m.
+
+           This can be used to provide a wrapper for a system function.  The wrapper function should be called "__wrap_[4msymbol"[24m.  If it wishes to call the system function, it should call "__real_[4msymbol"[24m.
+
+           Here is a trivial example:
+
+                   void *
+                   __wrap_malloc (size_t c)
+                   {
+                     printf ("malloc called with %zu\n", c);
+                     return __real_malloc (c);
+                   }
+
+           If you link other code with this file using [1m--wrap malloc[22m, then all calls to "malloc" will call the function "__wrap_malloc" instead.  The call to "__real_malloc" in "__wrap_malloc" will call
+           the real "malloc" function.
+
+           You may wish to provide a "__real_malloc" function as well, so that links without the [1m--wrap [22moption will succeed.  If you do this, you should not put the definition of "__real_malloc" in the
+           same file as "__wrap_malloc"; if you do, the assembler may resolve the call before the linker has a chance to wrap it to "malloc".
+
+       [1m--eh-frame-hdr[0m
+       [1m--no-eh-frame-hdr[0m
+           Request ([1m--eh-frame-hdr[22m) or suppress ([1m--no-eh-frame-hdr[22m) the creation of ".eh_frame_hdr" section and ELF "PT_GNU_EH_FRAME" segment header.
+
+       [1m--no-ld-generated-unwind-info[0m
+           Request creation of ".eh_frame" unwind info for linker generated code sections like PLT.  This option is on by default if linker generated unwind info is supported.
+
+       [1m--enable-new-dtags[0m
+       [1m--disable-new-dtags[0m
+           This linker can create the new dynamic tags in ELF. But the older ELF systems may not understand them. If you specify [1m--enable-new-dtags[22m, the new dynamic tags will be created as needed and older
+           dynamic tags will be omitted.  If you specify [1m--disable-new-dtags[22m, no new dynamic tags will be created. By default, the new dynamic tags are not created. Note that those options are only
+           available for ELF systems.
+
+       [1m--hash-size=[4m[22mnumber[0m
+           Set the default size of the linker's hash tables to a prime number close to [4mnumber[24m.  Increasing this value can reduce the length of time it takes the linker to perform its tasks, at the expense
+           of increasing the linker's memory requirements.  Similarly reducing this value can reduce the memory requirements at the expense of speed.
+
+       [1m--hash-style=[4m[22mstyle[0m
+           Set the type of linker's hash table(s).  [4mstyle[24m can be either "sysv" for classic ELF ".hash" section, "gnu" for new style GNU ".gnu.hash" section or "both" for both the classic ELF ".hash" and
+           new style GNU ".gnu.hash" hash tables.  The default is "sysv".
+
+       [1m--compress-debug-sections=none[0m
+       [1m--compress-debug-sections=zlib[0m
+       [1m--compress-debug-sections=zlib-gnu[0m
+       [1m--compress-debug-sections=zlib-gabi[0m
+           On ELF platforms, these options control how DWARF debug sections are compressed using zlib.
+
+           [1m--compress-debug-sections=none [22mdoesn't compress DWARF debug sections.  [1m--compress-debug-sections=zlib-gnu [22mcompresses DWARF debug sections and renames them to begin with [1m.zdebug [22minstead of
+           [1m.debug[22m.  [1m--compress-debug-sections=zlib-gabi [22malso compresses DWARF debug sections, but rather than renaming them it sets the SHF_COMPRESSED flag in the sections' headers.
+
+           The [1m--compress-debug-sections=zlib [22moption is an alias for [1m--compress-debug-sections=zlib-gabi[22m.
+
+           Note that this option overrides any compression in input debug sections, so if a binary is linked with [1m--compress-debug-sections=none [22mfor example, then any compressed debug sections in input
+           files will be uncompressed before they are copied into the output binary.
+
+           The default compression behaviour varies depending upon the target involved and the configure options used to build the toolchain.  The default can be determined by examining the output from the
+           linker's [1m--help [22moption.
+
+       [1m--reduce-memory-overheads[0m
+           This option reduces memory requirements at ld runtime, at the expense of linking speed.  This was introduced to select the old O(n^2) algorithm for link map file generation, rather than the new
+           O(n) algorithm which uses about 40% more memory for symbol storage.
+
+           Another effect of the switch is to set the default hash table size to 1021, which again saves memory at the cost of lengthening the linker's run time.  This is not done however if the
+           [1m--hash-size [22mswitch has been used.
+
+           The [1m--reduce-memory-overheads [22mswitch may be also be used to enable other tradeoffs in future versions of the linker.
+
+       [1m--build-id[0m
+       [1m--build-id=[4m[22mstyle[0m
+           Request the creation of a ".note.gnu.build-id" ELF note section or a ".buildid" COFF section.  The contents of the note are unique bits identifying this linked file.  [4mstyle[24m can be "uuid" to use
+           128 random bits, "sha1" to use a 160-bit SHA1 hash on the normative parts of the output contents, "md5" to use a 128-bit MD5 hash on the normative parts of the output contents, or "0x[4mhexstring"[0m
+           to use a chosen bit string specified as an even number of hexadecimal digits ("-" and ":" characters between digit pairs are ignored).  If [4mstyle[24m is omitted, "sha1" is used.
+
+           The "md5" and "sha1" styles produces an identifier that is always the same in an identical output file, but will be unique among all nonidentical output files.  It is not intended to be compared
+           as a checksum for the file's contents.  A linked file may be changed later by other tools, but the build ID bit string identifying the original linked file does not change.
+
+           Passing "none" for [4mstyle[24m disables the setting from any "--build-id" options earlier on the command line.
+
+       The i386 PE linker supports the [1m-shared [22moption, which causes the output to be a dynamically linked library (DLL) instead of a normal executable.  You should name the output "*.dll" when you use this
+       option.  In addition, the linker fully supports the standard "*.def" files, which may be specified on the linker command line like an object file (in fact, it should precede archives it exports
+       symbols from, to ensure that they get linked in, just like a normal object file).
+
+       In addition to the options common to all targets, the i386 PE linker support additional command line options that are specific to the i386 PE target.  Options that take values may be separated from
+       their values by either a space or an equals sign.
+
+       [1m--add-stdcall-alias[0m
+           If given, symbols with a stdcall suffix (@[4mnn[24m) will be exported as-is and also with the suffix stripped.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--base-file [4m[22mfile[0m
+           Use [4mfile[24m as the name of a file in which to save the base addresses of all the relocations needed for generating DLLs with [4mdlltool[24m.  [This is an i386 PE specific option]
+
+       [1m--dll[0m
+           Create a DLL instead of a regular executable.  You may also use [1m-shared [22mor specify a "LIBRARY" in a given ".def" file.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--enable-long-section-names[0m
+       [1m--disable-long-section-names[0m
+           The PE variants of the COFF object format add an extension that permits the use of section names longer than eight characters, the normal limit for COFF.  By default, these names are only
+           allowed in object files, as fully-linked executable images do not carry the COFF string table required to support the longer names.  As a GNU extension, it is possible to allow their use in
+           executable images as well, or to (probably pointlessly!)  disallow it in object files, by using these two options.  Executable images generated with these long section names are slightly non-
+           standard, carrying as they do a string table, and may generate confusing output when examined with non-GNU PE-aware tools, such as file viewers and dumpers.  However, GDB relies on the use of PE
+           long section names to find Dwarf-2 debug information sections in an executable image at runtime, and so if neither option is specified on the command-line, [1mld [22mwill enable long section names,
+           overriding the default and technically correct behaviour, when it finds the presence of debug information while linking an executable image and not stripping symbols.  [This option is valid for
+           all PE targeted ports of the linker]
+
+       [1m--enable-stdcall-fixup[0m
+       [1m--disable-stdcall-fixup[0m
+           If the link finds a symbol that it cannot resolve, it will attempt to do "fuzzy linking" by looking for another defined symbol that differs only in the format of the symbol name (cdecl vs
+           stdcall) and will resolve that symbol by linking to the match.  For example, the undefined symbol "_foo" might be linked to the function "_foo@12", or the undefined symbol "_bar@16" might be
+           linked to the function "_bar".  When the linker does this, it prints a warning, since it normally should have failed to link, but sometimes import libraries generated from third-party dlls may
+           need this feature to be usable.  If you specify [1m--enable-stdcall-fixup[22m, this feature is fully enabled and warnings are not printed.  If you specify [1m--disable-stdcall-fixup[22m, this feature is
+           disabled and such mismatches are considered to be errors.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--leading-underscore[0m
+       [1m--no-leading-underscore[0m
+           For most targets default symbol-prefix is an underscore and is defined in target's description. By this option it is possible to disable/enable the default underscore symbol-prefix.
+
+       [1m--export-all-symbols[0m
+           If given, all global symbols in the objects used to build a DLL will be exported by the DLL.  Note that this is the default if there otherwise wouldn't be any exported symbols.  When symbols are
+           explicitly exported via DEF files or implicitly exported via function attributes, the default is to not export anything else unless this option is given.  Note that the symbols "DllMain@12",
+           "DllEntryPoint@0", "DllMainCRTStartup@12", and "impure_ptr" will not be automatically exported.  Also, symbols imported from other DLLs will not be re-exported, nor will symbols specifying the
+           DLL's internal layout such as those beginning with "_head_" or ending with "_iname".  In addition, no symbols from "libgcc", "libstd++", "libmingw32", or "crtX.o" will be exported.  Symbols
+           whose names begin with "__rtti_" or "__builtin_" will not be exported, to help with C++ DLLs.  Finally, there is an extensive list of cygwin-private symbols that are not exported (obviously,
+           this applies on when building DLLs for cygwin targets).  These cygwin-excludes are: "_cygwin_dll_entry@12", "_cygwin_crt0_common@8", "_cygwin_noncygwin_dll_entry@12", "_fmode", "_impure_ptr",
+           "cygwin_attach_dll", "cygwin_premain0", "cygwin_premain1", "cygwin_premain2", "cygwin_premain3", and "environ".  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--exclude-symbols [4m[22msymbol[24m[1m,[4m[22msymbol[24m[1m,...[0m
+           Specifies a list of symbols which should not be automatically exported.  The symbol names may be delimited by commas or colons.  [This option is specific to the i386 PE targeted port of the
+           linker]
+
+       [1m--exclude-all-symbols[0m
+           Specifies no symbols should be automatically exported.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--file-alignment[0m
+           Specify the file alignment.  Sections in the file will always begin at file offsets which are multiples of this number.  This defaults to 512.  [This option is specific to the i386 PE targeted
+           port of the linker]
+
+       [1m--heap [4m[22mreserve[0m
+       [1m--heap [4m[22mreserve[24m[1m,[4m[22mcommit[0m
+           Specify the number of bytes of memory to reserve (and optionally commit) to be used as heap for this program.  The default is 1MB reserved, 4K committed.  [This option is specific to the i386 PE
+           targeted port of the linker]
+
+       [1m--image-base [4m[22mvalue[0m
+           Use [4mvalue[24m as the base address of your program or dll.  This is the lowest memory location that will be used when your program or dll is loaded.  To reduce the need to relocate and improve
+           performance of your dlls, each should have a unique base address and not overlap any other dlls.  The default is 0x400000 for executables, and 0x10000000 for dlls.  [This option is specific to
+           the i386 PE targeted port of the linker]
+
+       [1m--kill-at[0m
+           If given, the stdcall suffixes (@[4mnn[24m) will be stripped from symbols before they are exported.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--large-address-aware[0m
+           If given, the appropriate bit in the "Characteristics" field of the COFF header is set to indicate that this executable supports virtual addresses greater than 2 gigabytes.  This should be used
+           in conjunction with the /3GB or /USERVA=[4mvalue[24m megabytes switch in the "[operating systems]" section of the BOOT.INI.  Otherwise, this bit has no effect.  [This option is specific to PE targeted
+           ports of the linker]
+
+       [1m--disable-large-address-aware[0m
+           Reverts the effect of a previous [1m--large-address-aware [22moption.  This is useful if [1m--large-address-aware [22mis always set by the compiler driver (e.g. Cygwin gcc) and the executable does not support
+           virtual addresses greater than 2 gigabytes.  [This option is specific to PE targeted ports of the linker]
+
+       [1m--major-image-version [4m[22mvalue[0m
+           Sets the major number of the "image version".  Defaults to 1.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--major-os-version [4m[22mvalue[0m
+           Sets the major number of the "os version".  Defaults to 4.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--major-subsystem-version [4m[22mvalue[0m
+           Sets the major number of the "subsystem version".  Defaults to 4.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--minor-image-version [4m[22mvalue[0m
+           Sets the minor number of the "image version".  Defaults to 0.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--minor-os-version [4m[22mvalue[0m
+           Sets the minor number of the "os version".  Defaults to 0.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--minor-subsystem-version [4m[22mvalue[0m
+           Sets the minor number of the "subsystem version".  Defaults to 0.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--output-def [4m[22mfile[0m
+           The linker will create the file [4mfile[24m which will contain a DEF file corresponding to the DLL the linker is generating.  This DEF file (which should be called "*.def") may be used to create an
+           import library with "dlltool" or may be used as a reference to automatically or implicitly exported symbols.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--enable-auto-image-base[0m
+       [1m--enable-auto-image-base=[4m[22mvalue[0m
+           Automatically choose the image base for DLLs, optionally starting with base [4mvalue[24m, unless one is specified using the "--image-base" argument.  By using a hash generated from the dllname to
+           create unique image bases for each DLL, in-memory collisions and relocations which can delay program execution are avoided.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--disable-auto-image-base[0m
+           Do not automatically generate a unique image base.  If there is no user-specified image base ("--image-base") then use the platform default.  [This option is specific to the i386 PE targeted
+           port of the linker]
+
+       [1m--dll-search-prefix [4m[22mstring[0m
+           When linking dynamically to a dll without an import library, search for "<string><basename>.dll" in preference to "lib<basename>.dll". This behaviour allows easy distinction between DLLs built
+           for the various "subplatforms": native, cygwin, uwin, pw, etc.  For instance, cygwin DLLs typically use "--dll-search-prefix=cyg".  [This option is specific to the i386 PE targeted port of the
+           linker]
+
+       [1m--enable-auto-import[0m
+           Do sophisticated linking of "_symbol" to "__imp__symbol" for DATA imports from DLLs, and create the necessary thunking symbols when building the import libraries with those DATA exports. Note:
+           Use of the 'auto-import' extension will cause the text section of the image file to be made writable. This does not conform to the PE-COFF format specification published by Microsoft.
+
+           Note - use of the 'auto-import' extension will also cause read only data which would normally be placed into the .rdata section to be placed into the .data section instead.  This is in order to
+           work around a problem with consts that is described here: http://www.cygwin.com/ml/cygwin/2004-09/msg01101.html
+
+           Using 'auto-import' generally will 'just work' -- but sometimes you may see this message:
+
+           "variable '<var>' can't be auto-imported. Please read the documentation for ld's "--enable-auto-import" for details."
+
+           This message occurs when some (sub)expression accesses an address ultimately given by the sum of two constants (Win32 import tables only allow one).  Instances where this may occur include
+           accesses to member fields of struct variables imported from a DLL, as well as using a constant index into an array variable imported from a DLL.  Any multiword variable (arrays, structs, long
+           long, etc) may trigger this error condition.  However, regardless of the exact data type of the offending exported variable, ld will always detect it, issue the warning, and exit.
+
+           There are several ways to address this difficulty, regardless of the data type of the exported variable:
+
+           One way is to use --enable-runtime-pseudo-reloc switch. This leaves the task of adjusting references in your client code for runtime environment, so this method works only when runtime
+           environment supports this feature.
+
+           A second solution is to force one of the 'constants' to be a variable -- that is, unknown and un-optimizable at compile time.  For arrays, there are two possibilities: a) make the indexee (the
+           array's address) a variable, or b) make the 'constant' index a variable.  Thus:
+
+                   extern type extern_array[];
+                   extern_array[1] -->
+                      { volatile type *t=extern_array; t[1] }
+
+           or
+
+                   extern type extern_array[];
+                   extern_array[1] -->
+                      { volatile int t=1; extern_array[t] }
+
+           For structs (and most other multiword data types) the only option is to make the struct itself (or the long long, or the ...) variable:
+
+                   extern struct s extern_struct;
+                   extern_struct.field -->
+                      { volatile struct s *t=&extern_struct; t->field }
+
+           or
+
+                   extern long long extern_ll;
+                   extern_ll -->
+                     { volatile long long * local_ll=&extern_ll; *local_ll }
+
+           A third method of dealing with this difficulty is to abandon 'auto-import' for the offending symbol and mark it with "__declspec(dllimport)".  However, in practice that requires using compile-
+           time #defines to indicate whether you are building a DLL, building client code that will link to the DLL, or merely building/linking to a static library.   In making the choice between the
+           various methods of resolving the 'direct address with constant offset' problem, you should consider typical real-world usage:
+
+           Original:
+
+                   --foo.h
+                   extern int arr[];
+                   --foo.c
+                   #include "foo.h"
+                   void main(int argc, char **argv){
+                     printf("%d\n",arr[1]);
+                   }
+
+           Solution 1:
+
+                   --foo.h
+                   extern int arr[];
+                   --foo.c
+                   #include "foo.h"
+                   void main(int argc, char **argv){
+                     /* This workaround is for win32 and cygwin; do not "optimize" */
+                     volatile int *parr = arr;
+                     printf("%d\n",parr[1]);
+                   }
+
+           Solution 2:
+
+                   --foo.h
+                   /* Note: auto-export is assumed (no __declspec(dllexport)) */
+                   #if (defined(_WIN32) || defined(__CYGWIN__)) && \
+                     !(defined(FOO_BUILD_DLL) || defined(FOO_STATIC))
+                   #define FOO_IMPORT __declspec(dllimport)
+                   #else
+                   #define FOO_IMPORT
+                   #endif
+                   extern FOO_IMPORT int arr[];
+                   --foo.c
+                   #include "foo.h"
+                   void main(int argc, char **argv){
+                     printf("%d\n",arr[1]);
+                   }
+
+           A fourth way to avoid this problem is to re-code your library to use a functional interface rather than a data interface for the offending variables (e.g. [1mset_foo() [22mand [1mget_foo() [22maccessor
+           functions).  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--disable-auto-import[0m
+           Do not attempt to do sophisticated linking of "_symbol" to "__imp__symbol" for DATA imports from DLLs.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--enable-runtime-pseudo-reloc[0m
+           If your code contains expressions described in --enable-auto-import section, that is, DATA imports from DLL with non-zero offset, this switch will create a vector of 'runtime pseudo relocations'
+           which can be used by runtime environment to adjust references to such data in your client code.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--disable-runtime-pseudo-reloc[0m
+           Do not create pseudo relocations for non-zero offset DATA imports from DLLs.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--enable-extra-pe-debug[0m
+           Show additional debug info related to auto-import symbol thunking.  [This option is specific to the i386 PE targeted port of the linker]
+
+       [1m--section-alignment[0m
+           Sets the section alignment.  Sections in memory will always begin at addresses which are a multiple of this number.  Defaults to 0x1000.  [This option is specific to the i386 PE targeted port of
+           the linker]
+
+       [1m--stack [4m[22mreserve[0m
+       [1m--stack [4m[22mreserve[24m[1m,[4m[22mcommit[0m
+           Specify the number of bytes of memory to reserve (and optionally commit) to be used as stack for this program.  The default is 2MB reserved, 4K committed.  [This option is specific to the i386
+           PE targeted port of the linker]
+
+       [1m--subsystem [4m[22mwhich[0m
+       [1m--subsystem [4m[22mwhich[24m[1m:[4m[22mmajor[0m
+       [1m--subsystem [4m[22mwhich[24m[1m:[4m[22mmajor[24m[1m.[4m[22mminor[0m
+           Specifies the subsystem under which your program will execute.  The legal values for [4mwhich[24m are "native", "windows", "console", "posix", and "xbox".  You may optionally set the subsystem version
+           also.  Numeric values are also accepted for [4mwhich[24m.  [This option is specific to the i386 PE targeted port of the linker]
+
+           The following options set flags in the "DllCharacteristics" field of the PE file header: [These options are specific to PE targeted ports of the linker]
+
+       [1m--high-entropy-va[0m
+           Image is compatible with 64-bit address space layout randomization (ASLR).
+
+       [1m--dynamicbase[0m
+           The image base address may be relocated using address space layout randomization (ASLR).  This feature was introduced with MS Windows Vista for i386 PE targets.
+
+       [1m--forceinteg[0m
+           Code integrity checks are enforced.
+
+       [1m--nxcompat[0m
+           The image is compatible with the Data Execution Prevention.  This feature was introduced with MS Windows XP SP2 for i386 PE targets.
+
+       [1m--no-isolation[0m
+           Although the image understands isolation, do not isolate the image.
+
+       [1m--no-seh[0m
+           The image does not use SEH. No SE handler may be called from this image.
+
+       [1m--no-bind[0m
+           Do not bind this image.
+
+       [1m--wdmdriver[0m
+           The driver uses the MS Windows Driver Model.
+
+       [1m--tsaware[0m
+           The image is Terminal Server aware.
+
+       [1m--insert-timestamp[0m
+       [1m--no-insert-timestamp[0m
+           Insert a real timestamp into the image.  This is the default behaviour as it matches legacy code and it means that the image will work with other, proprietary tools.  The problem with this
+           default is that it will result in slightly different images being produced each time the same sources are linked.  The option [1m--no-insert-timestamp [22mcan be used to insert a zero value for the
+           timestamp, this ensuring that binaries produced from identical sources will compare identically.
+
+       The C6X uClinux target uses a binary format called DSBT to support shared libraries.  Each shared library in the system needs to have a unique index; all executables use an index of 0.
+
+       [1m--dsbt-size [4m[22msize[0m
+           This option sets the number of entries in the DSBT of the current executable or shared library to [4msize[24m.  The default is to create a table with 64 entries.
+
+       [1m--dsbt-index [4m[22mindex[0m
+           This option sets the DSBT index of the current executable or shared library to [4mindex[24m.  The default is 0, which is appropriate for generating executables.  If a shared library is generated with a
+           DSBT index of 0, the "R_C6000_DSBT_INDEX" relocs are copied into the output file.
+
+           The [1m--no-merge-exidx-entries [22mswitch disables the merging of adjacent exidx entries in frame unwind info.
+
+       The 68HC11 and 68HC12 linkers support specific options to control the memory bank switching mapping and trampoline code generation.
+
+       [1m--no-trampoline[0m
+           This option disables the generation of trampoline. By default a trampoline is generated for each far function which is called using a "jsr" instruction (this happens when a pointer to a far
+           function is taken).
+
+       [1m--bank-window [4m[22mname[0m
+           This option indicates to the linker the name of the memory region in the [1mMEMORY [22mspecification that describes the memory bank window.  The definition of such region is then used by the linker to
+           compute paging and addresses within the memory window.
+
+       The following options are supported to control handling of GOT generation when linking for 68K targets.
+
+       [1m--got=[4m[22mtype[0m
+           This option tells the linker which GOT generation scheme to use.  [4mtype[24m should be one of [1msingle[22m, [1mnegative[22m, [1mmultigot [22mor [1mtarget[22m.  For more information refer to the Info entry for [4mld[24m.
+
+       The following options are supported to control microMIPS instruction generation and branch relocation checks for ISA mode transitions when linking for MIPS targets.
+
+       [1m--insn32[0m
+       [1m--no-insn32[0m
+           These options control the choice of microMIPS instructions used in code generated by the linker, such as that in the PLT or lazy binding stubs, or in relaxation.  If [1m--insn32 [22mis used, then the
+           linker only uses 32-bit instruction encodings.  By default or if [1m--no-insn32 [22mis used, all instruction encodings are used, including 16-bit ones where possible.
+
+       [1m--ignore-branch-isa[0m
+       [1m--no-ignore-branch-isa[0m
+           These options control branch relocation checks for invalid ISA mode transitions.  If [1m--ignore-branch-isa [22mis used, then the linker accepts any branch relocations and any ISA mode transition
+           required is lost in relocation calculation, except for some cases of "BAL" instructions which meet relaxation conditions and are converted to equivalent "JALX" instructions as the associated
+           relocation is calculated.  By default or if [1m--no-ignore-branch-isa [22mis used a check is made causing the loss of an ISA mode transition to produce an error.
+
+[1mENVIRONMENT[0m
+       You can change the behaviour of [1mld [22mwith the environment variables "GNUTARGET", "LDEMULATION" and "COLLECT_NO_DEMANGLE".
+
+       "GNUTARGET" determines the input-file object format if you don't use [1m-b [22m(or its synonym [1m--format[22m).  Its value should be one of the BFD names for an input format.  If there is no "GNUTARGET" in the
+       environment, [1mld [22muses the natural format of the target. If "GNUTARGET" is set to "default" then BFD attempts to discover the input format by examining binary input files; this method often succeeds,
+       but there are potential ambiguities, since there is no method of ensuring that the magic number used to specify object-file formats is unique.  However, the configuration procedure for BFD on each
+       system places the conventional format for that system first in the search-list, so ambiguities are resolved in favor of convention.
+
+       "LDEMULATION" determines the default emulation if you don't use the [1m-m [22moption.  The emulation can affect various aspects of linker behaviour, particularly the default linker script.  You can list
+       the available emulations with the [1m--verbose [22mor [1m-V [22moptions.  If the [1m-m [22moption is not used, and the "LDEMULATION" environment variable is not defined, the default emulation depends upon how the linker
+       was configured.
+
+       Normally, the linker will default to demangling symbols.  However, if "COLLECT_NO_DEMANGLE" is set in the environment, then it will default to not demangling symbols.  This environment variable is
+       used in a similar fashion by the "gcc" linker wrapper program.  The default may be overridden by the [1m--demangle [22mand [1m--no-demangle [22moptions.
+
+[1mSEE ALSO[0m
+       [1mar[22m(1), [1mnm[22m(1), [1mobjcopy[22m(1), [1mobjdump[22m(1), [1mreadelf[22m(1) and the Info entries for [4mbinutils[24m and [4mld[24m.
+
+[1mCOPYRIGHT[0m
+       Copyright (c) 1991-2018 Free Software Foundation, Inc.
+
+       Permission is granted to copy, distribute and/or modify this document under the terms of the GNU Free Documentation License, Version 1.3 or any later version published by the Free Software
+       Foundation; with no Invariant Sections, with no Front-Cover Texts, and with no Back-Cover Texts.  A copy of the license is included in the section entitled "GNU Free Documentation License".
+
+binutils-2.30                                                                                     2020-08-26                                                                                            LD(1)

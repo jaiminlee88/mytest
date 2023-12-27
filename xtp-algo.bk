@@ -1,0 +1,434 @@
+#!/home/hf/miniconda3/bin/python3.8
+"""Run this script at hf@xtpsz to send algo to XTP"""
+import copy
+import datetime
+import json
+import time
+import traceback
+from typing import List
+from pathlib import Path
+from functools import wraps
+from logging import getLogger
+from logging.config import dictConfig
+from collections import defaultdict
+from datetime import datetime as dt, timedelta
+
+import redis
+import yaml
+import click
+
+# IMPORTANT: if not import will cause
+# TypeError: Unable to convert function return value to a Python type! The signature was
+# 	(self: pyxtpapi.xtpapi.XtpApi) -> List[common_types::Pos]
+import common_types
+
+log = getLogger(__name__)
+
+SIDE_BUY = 'BUY'
+SIDE_SELL = 'SELL'
+SIDE_SHORT = 'SHORT'
+SIDE_COVER = 'COVER'
+
+
+def log_ex(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # noinspection PyBroadException
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            log.error(traceback.format_exc())
+
+    return wrapper
+
+
+def get_redis(url):
+    assert url is not None, 'redis url is None.'
+    s = url.split(':')
+    in_host, in_port = s[0], int(s[1]) if len(s) > 1 else 6379
+    r = redis.StrictRedis(
+        host=in_host, port=in_port, decode_responses=True, socket_timeout=30, socket_connect_timeout=10)
+    r.ping()
+    log.info('redis {}:{} ping success.'.format(in_host, in_port))
+    return r
+
+
+def f_time(dt_=None, format_='%Y-%m-%d %H:%M:%S'):
+    dt_ = dt_ or dt.now()
+    return dt_.strftime(format_)
+
+
+def configure_logger():
+    cfg = {
+        "version":                  1,
+        "formatters":               {
+            "simple": {
+                "format": "[%(asctime)s] [%(threadName)s] %(levelname)s %(name)s: %(message)s",
+            }
+        },
+        "handlers":                 {
+            "console": {
+                "class":     "logging.StreamHandler",
+                "formatter": "simple",
+                "level":     "DEBUG",
+                "stream":    "ext://sys.stdout",
+            },
+        },
+        "root":                     {"level": "DEBUG", "handlers": ["console"]},
+        "loggers":                  {},
+        "disable_existing_loggers": False,
+    }
+    dictConfig(cfg)
+
+
+class Algo:
+
+    def __init__(self, strategy, algo_str):
+        """AlphaVWAP;startTime=%H%M;endTime=%H%M;limitPrice=0;aggressiveLevel=1"""
+        self.strategy = strategy
+        self.algo_str = algo_str
+        self.algo_name = None
+        self.beg_tag = None
+        self.beg_fmt = None
+        self.end_tag = None
+        self.end_fmt = None
+        self.lim_px_tag = None
+        self.lim_px = None
+        self.algo_params = None
+        self.running_syms = {}
+
+    def is_running(self, sym):
+        if sym not in self.running_syms:
+            return False
+        _, trd_end_dt = self.running_syms[sym]
+        now = dt.now()
+        if now < trd_end_dt:
+            return True
+        # assume algo stops
+        self.stop_running(sym)
+        return False
+
+    def start_running(self, sym, start, end):
+        if self.is_running(sym):
+            log.warning('{} algo is running, do not start a new algo.'.format(sym))
+            return
+        self.running_syms[sym] = start, end
+        log.info('set {} algo trade start at {} end at {}'.format(sym, start, end))
+
+    def update_status(self):
+        for sym in list(self.running_syms.keys()):
+            self.is_running(sym)
+
+    def stop_running(self, sym):
+        trd_start_dt, trd_end_dt = self.running_syms[sym]
+        log.info('stop {} algo start {} end {}, wait for new signal.'.format(sym, trd_start_dt, trd_end_dt))
+        del self.running_syms[sym]
+
+    def parse(self):
+        assert self.algo_str is not None, 'algo params is None.'
+        seg = [x.strip() for x in self.algo_str.split(';') if x]
+        assert len(seg) >= 3, 'wrong algo params: {}'.format(self.algo_str)
+        self.beg_tag, self.beg_fmt = [x.strip() for x in seg[1].split('=')]
+        self.algo_name = seg[0]
+        self.end_tag, self.end_fmt = [x.strip() for x in seg[2].split('=')]
+        self.lim_px_tag, self.lim_px = [x.strip() for x in seg[3].split('=')]
+        self.algo_params = ['='.join([x.strip() for x in y.split('=')]) for y in seg[4:]]
+        return self
+
+    def make_param(self, order, start, end):
+        lim_px = order.lim_px or self.lim_px
+        return ';'.join(
+            ['AlgoType=%s' % self.algo_name,
+             '%s=%s' % (self.beg_tag, f_time(start, self.beg_fmt)),
+             '%s=%s' % (self.end_tag, f_time(end, self.end_fmt)),
+             '%s=%s' % (self.lim_px_tag, lim_px)] + self.algo_params)
+
+
+class Signal:
+    TYPE_TARGET = 'target'  # target share
+    TYPE_ORDER = 'order'  # order
+    TYPE_CLEAR = 'clear'  # clearance, no data is needed
+    TYPE_TUPLE = (TYPE_TARGET, TYPE_ORDER)
+
+    def __init__(self, strategy, signal_str):
+        """
+        json format
+        {
+            "sig_type": "target", # target (share) or order
+            "sig_ts": "093300",
+            "sent_ts": "093021",
+            "trd_start_ts": "093300",
+            "trd_end_ts": "100000",
+            "algo_type": "", # optional, support in kafang, TWAP, VWAP, POV_Core, Passthru...
+            "data": [
+                {
+                    "sym": "000513.SZ",
+                    "share": 5100,
+                    "lim_px": "45.5", # optional
+                    "ord_id": "" # optional
+                },
+                ...
+            ]
+        }
+        """
+        self.st = strategy
+        self._signal = json.loads(signal_str)
+        self.data = {}
+        self.sig_type = None
+        self.sig_dt = None
+        self.sent_dt = None
+        self.trd_start_dt = None
+        self.trd_end_dt = None
+        self.now = dt.now()
+
+    def parse_dt(self, r, fmt='%H%M%S'):
+        return dt.strptime(r, fmt).replace(year=self.now.year, month=self.now.month, day=self.now.day)
+
+    def parse(self):
+        r = self._signal
+        assert isinstance(r, dict), 'signal is not dict: {}'.format(r)
+        self.sig_type = r['sig_type']
+        assert self.sig_type in self.TYPE_TUPLE, 'signal type invalid: {}'.format(self.sig_type)
+        sig_dt, sent_dt = self.parse_dt(r['sig_ts']), self.parse_dt(r['sent_ts'])
+        if self.sig_dt == self.st.noon_beg and \
+            self.st.noon_end <= self.now < self.st.noon_end + timedelta(minutes=self.st.freq):
+            log.info('shift targets of {} to {}'.format(self.st.noon_beg, self.st.noon_end))
+            sig_dt = sent_dt = self.st.noon_end
+        self.data = {d['sym']: d for d in r['data']}
+        if not self.data and self.sig_type != self.TYPE_CLEAR:
+            log.warning('no data found on sig {}'.format(sig_dt))
+        if sent_dt > self.now:
+            log.warning('send time {} > now {}'.format(sent_dt, self.now))
+            return
+        if self.now - sent_dt > timedelta(seconds=self.st.expire_secs):
+            log.warning('ignore expired signal: sent at {} sig at {}'.format(sent_dt, sig_dt))
+            return
+        trd_start_dt, trd_end_dt = self.parse_dt(r['trd_start_ts']), self.parse_dt(r['trd_end_ts'])
+        self.trd_start_dt, self.trd_end_dt = max(trd_start_dt, self.st.trade_beg), min(trd_end_dt, self.st.trade_end)
+        if trd_end_dt - self.now < timedelta(seconds=self.st.min_secs):
+            log.warning('now is {} trade end is {}, ignore signal'.format(self.now, trd_end_dt))
+            return
+        self.sig_dt = sig_dt
+        self.sent_dt = sent_dt
+        return self
+
+
+class Order:
+
+    def __init__(self, d):
+        """
+        Input pos and target ==> order and side
+        :param d: Dict
+        """
+        self.sym = d['sym']
+        self.target = int(d['share'])  # target share
+        self.pos = int(d['pos'])  # position share
+        # target and position should be same direction
+        assert self.target * self.pos >= 0, \
+            "Invalid {} pos {} target {}".format(self.sym, str(self.pos), str(self.target))
+        self.lim_px = d.get('lim_px')
+        self.ord_id = d.get('ord_id')
+        self._side = ''
+
+    @property
+    def size(self) -> int:
+        """Order share"""
+        return self.target - self.pos
+
+    @property
+    def side(self) -> str:
+        return self._side
+
+    def set_side(self, is_credit_account):
+        # EQD account can trade short position
+
+        size = self.size
+        if self.pos > 0:
+            self._side = SIDE_BUY if size >= 0 else SIDE_SELL
+        elif self.pos < 0:
+            self._side = SIDE_COVER if size >= 0 else SIDE_SHORT
+        else:
+            self._side = SIDE_BUY if size >= 0 else SIDE_SHORT
+        if is_credit_account:
+            # self._side = SIDE_MARGIN_BUY if self.side == SIDE_BUY else SIDE_MARGIN_SELL
+            raise NotImplementedError
+
+
+def get_xtp_api_info(book, cfg_path, login=True):
+    cfg_path = Path(cfg_path).expanduser().resolve()
+    log.info(f"Read xtp cfg from {cfg_path}")
+    datas = yaml.safe_load(cfg_path.read_bytes())
+    data = None
+    for x in datas:
+        if x['book-id'] == book:
+            data = x
+    assert data, f"can not find {book} in {cfg_path}"
+
+    client_id = data['cid']
+    # url = data['url']
+    # account_id = url.split(':')[0]
+    strat_type = data['strat-type']
+    algo_ip = data['algo-ip']
+    algo_port = data['algo-port']
+    algo_user = data['algo-user']
+    algo_pwd = data['algo-pwd']
+    oms_ip = data['oms-ip']
+    oms_port = data['oms-port']
+    oms_user = data['oms-user']
+    oms_pwd = data['oms-pwd']
+    oms_key = data['oms-key']
+
+    conf = None
+    for c in data['config']:
+        if c['type'] == strat_type:
+            conf = c
+    assert conf, f'invalid strat-type: {strat_type}'
+
+    # oms个字段拼凑成url
+    url = f"{oms_user}:{oms_pwd}@{oms_ip}:{oms_port}/{oms_key}"
+
+    import pyxtpapi
+    api = pyxtpapi.XtpApi(url, client_id)
+    if login:
+        if api.login() == False:
+            raise Exception("Xtp login failed")
+        # 登录algo
+        api.login_algo(algo_ip, algo_port, algo_user, algo_pwd)
+
+    return api, conf
+
+
+class XTPAlgo:
+    VALID_PREFIX = ('00', '30', '6')
+
+    def __init__(self, book: int, cfg: str, redis_url: str, test: bool):
+        self.r = get_redis(redis_url)
+        self.book = book
+        self.api, self.cfg = get_xtp_api_info(book, cfg)
+        log.info(str(self.cfg))
+        self.log = log
+
+        self.min_secs = 120
+        self.expire_secs = 60
+        self.freq = 10
+        n = datetime.datetime.now()
+        y, m, d = n.year, n.month, n.day
+        self.trade_beg = dt(y, m, d, 9, 30)
+        self.noon_beg = dt(y, m, d, 11, 30)
+        self.noon_end = dt(y, m, d, 13)
+        self.trade_end = dt(y, m, d, 14, 57)
+        self.sig_key = f"signal/{book}/{n.strftime('%Y%m%d')}"
+        self.pos = defaultdict(int)
+        # self.loc = defaultdict(int)
+        self.is_credit_account = False
+        self.is_prod = not test  # if True, no send orders
+
+    def run(self):
+        orders = self.gen_orders()
+        self.trade(orders)
+
+    def update_pos(self):
+        pos_data: common_types.Pos = self.api.query_position()
+        self.pos = {p.ticker: p.qty for p in pos_data}
+        # self.loc = {p.ticker: p.sellable_qty for p in pos_data}
+
+    def gen_orders_from_sig(self, sig):
+        # always update position
+        self.update_pos()
+        orders = []
+        if sig.sig_type == Signal.TYPE_ORDER:
+            for d in sig.data.values():
+                d['pos'] = self.pos.get(d['sym'], 0)
+                d['share'] += d['pos']
+                orders.append(Order(d))
+        elif sig.sig_type == Signal.TYPE_CLEAR:
+            orders = [Order(dict(sym=sym, share=0, pos=qty)) for sym, qty in self.pos.items()]
+        elif sig.sig_type == Signal.TYPE_TARGET:
+            for sym in sig.data:
+                if sym not in self.pos:
+                    self.pos[sym] = 0
+            for sym, qty in self.pos.items():
+                sym_data = sig.data.get(sym, {'sym': sym, 'share': 0})
+                sym_data['pos'] = qty
+                orders.append(Order(sym_data))
+        else:
+            raise NotImplementedError('Invalid sig type {}'.format(sig.sig_type))
+        [o.set_side(self.is_credit_account) for o in orders]
+        return [o for o in orders if o.size != 0]
+
+    def get_signal(self):
+        self.log.info(f"listen to {self.sig_key}")
+        while True:
+            now = datetime.datetime.now()
+            if self.trade_beg < now < self.trade_end:
+                if res := self.r.lpop(self.sig_key):
+                    self.log.info('receive signal {}'.format(res))
+                    if sig := Signal(self, res).parse():
+                        return sig
+            elif now >= self.trade_end:
+                log.info(f'Reach trade end {self.trade_end}')
+                return
+            time.sleep(1)
+
+    def is_tradable_sym(self, sym):
+        for prefix in self.VALID_PREFIX:
+            if sym.startswith(prefix):
+                return True
+        return False
+
+    def trade(self, orders: List[Order]):
+        if not orders:
+            return
+        if self.is_prod:
+            strat_type = int(self.cfg['type'])  # 皓兴vwap
+            algo_sig = copy.deepcopy(self.cfg['extend-config'])
+            algo_sig['start_time'] = f_time(self.sig.trd_start_dt, '%H:%M:%S')
+            algo_sig['end_time'] = f_time(self.sig.trd_end_dt, '%H:%M:%S')
+            algo_sig['trade_list'] = []
+            for order in orders:
+                sym = order.sym
+                if not self.is_tradable_sym(sym):
+                    self.log.warning('invalid sym {} to trade.'.format(sym))
+                    continue
+                trade = {}
+                ticker, market = order.sym.split('.')
+                trade['ticker'] = ticker
+                trade['market'] = market
+                trade["quantity"] = abs(int(order.size))
+                trade['side'] = order.side
+                algo_sig['trade_list'].append(trade)
+            self.log.info(
+                f"Send {len(algo_sig['trade_list'])} orders from {self.sig.trd_start_dt} to {self.sig.trd_end_dt}")
+            self.api.send_algo_order(strat_type, json.dumps(algo_sig))
+        else:
+            self.log.info('would placed %d algo orders' % len(orders))
+
+    def gen_orders(self):
+        """
+        get signal from redis and gen orders
+        :return:
+        """
+        sig = self.get_signal()
+        if not sig:
+            return []
+        self.log.info('found targets on signal {}'.format(self.sig_key))
+        orders = self.gen_orders_from_sig(sig)
+        self.log.info('{} got {} target(s) --> {} order(s)'.format(sig.sig_dt, len(sig.data), len(orders)))
+        self.sig = sig
+        return orders
+
+
+@click.command()
+@click.argument('book', type=int)
+@click.option('--cfg', type=str, default='~/bin/algo_config.yml')
+@click.option('--redis-url', type=str, default='localhost:6373')
+@click.option('--test', is_flag=True)
+def cli(book, cfg, redis_url, test):
+    XTPAlgo(book, cfg, redis_url, test).run()
+
+
+if __name__ == '__main__':
+    # ~/bin/xtp-algo 311 --test
+    configure_logger()
+    cli()
+
