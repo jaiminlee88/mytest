@@ -1,4 +1,6 @@
 #include <iostream>
+#include <unordered_map>
+#include <memory>
 using namespace std;
 
 
@@ -36,6 +38,9 @@ int main() {
     abc = 3;
     cout << fetch << " " << jack::fetch << " abc=" << abc << endl;
 
-    using itType = 
+    using UPtrMapSS = std::unique_ptr<std::unordered_map<std::string, std::string>>;
+
+    typedef void (*FP)(int, const std::string&);    //typedef
+    using FP = void (*)(int, const std::string&);   //别名声明
     return 0;
 }

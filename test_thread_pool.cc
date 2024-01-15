@@ -621,13 +621,15 @@ void test5() {
 
 }
 
+class interrupt_flag;
+static thread_local interrupt_flag this_thread_interrupt_flag; // 每个线程都有一个interrupt_flag对象
 
 class interrupt_flag {
 private:
-    std::atomic_bool flag;
-    std::condition_variable* thread_cond;
-    std::condition_variable_any* thread_cond_any;
-    std::mutex set_clear_mutex;
+    std::atomic_bool                flag;
+    std::condition_variable*        thread_cond;
+    std::condition_variable_any*    thread_cond_any;
+    std::mutex                      set_clear_mutex;
 public:
     interrupt_flag() : flag(false), thread_cond(nullptr), thread_cond_any(nullptr) {}
     void set() {
@@ -656,7 +658,7 @@ public:
         }
     };
 };
-thread_local interrupt_flag this_thread_interrupt_flag; // 每个线程都有一个interrupt_flag对象
+
 
 // 判断是否已经被中断
 void interruption_point() {
@@ -708,15 +710,20 @@ void interruptible_wait_any(std::condition_variable_any& cv, Lockable& lk) {
 
 class interruptible_thread {
 private:
-    std::thread internal_thread;
-    interrupt_flag* flag; // 中断结构
+    std::thread                         internal_thread;
+    interrupt_flag*                     flag; // 中断结构
+    // static thread_local interrupt_flag  this_thread_interrupt_flag; // 每个线程都有一个interrupt_flag对象
 public:
-    template<tupeanme FunctionType>
+    template<typename FunctionType>
     interruptible_thread(FunctionType f) {
         std::promise<interrupt_flag*> p;
-        internal_thread = std::thread([f,&p](){
+        internal_thread = std::thread([f,&](){
             p.set_value(&this_thread_interrupt_flag); // 子线程独有的interrupt_flag
-            f(); // 子线程执行的函数
+            try {
+                f();// 子线程执行的函数 worker_thread
+            } catch (thread_interrupted const&) {
+                // utils_threadsafe_print_level(utils_log_level::INFO, g_utils_log_level, mlock, "thread_interrupted");
+            }
         });
         flag = p.get_future().get();
     }
@@ -750,7 +757,7 @@ private:
         while(!done) {
             function_wrapper task;
             if (work_queue.try_pop(task)) {
-                task();
+                task(); // 可以在该函数中检查中断标志
             } else {
                 std::this_thread::yield();
             }
@@ -781,6 +788,10 @@ public:
         return res; // 返回future，等待任务完全计数
     }
 };
+
+void test6() {
+
+}
 
 int main() {
     g_utils_log_level = utils_log_level::DEBUG;

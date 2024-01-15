@@ -97,6 +97,10 @@ gen:
 	@echo param: f=${f} srcfile=${srcfile}
 	g++ --std=c++11 -g -O0 -lpthread -latomic ${f} -o ${srcfile}.out
 
+gen14:
+	@echo param: f=${f} srcfile=${srcfile}
+	g++ --std=c++14 -g -O0 -lpthread -latomic ${f} -o ${srcfile}.out
+
 gen17:
 	@echo param: f=${f} srcfile=${srcfile}
 	g++ --std=c++17 -g -O0 -lpthread -latomic ${f} -o ${srcfile}.out

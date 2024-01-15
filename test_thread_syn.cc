@@ -790,6 +790,9 @@ int test_packaged_task_2() {
 }
  
 { // bind
+    /*
+    C++中的bind函数用于创建一个函数对象（也称为函数符或函数子），该函数对象可以将参数绑定到函数中。bind函数是函数式编程的重要工具，它允许我们在调用函数时，通过预先绑定一些参数值来创建一个新的可调用对象。
+    */
 	std::packaged_task<int()> task(std::bind([](int x, int y) { return std::pow(x, y); }, 2, 11));
 	std::future<int> result = task.get_future();
  

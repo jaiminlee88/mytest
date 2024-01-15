@@ -89,7 +89,7 @@ int main() {
         std::weak_ptr<int> wp(p1);
         std::cout << "wp.use_count() = " << wp.use_count() << std::endl;
         if (!wp.expired()) {
-            std::shared_ptr<int> p2 = wp.lock();
+            std::shared_ptr<int> p2 = wp.lock(); // 提升为shared_ptr，不阻塞，需要查看p2是否为空
             *p2 = 100;
             std::cout << "p2 = " << *p2 << std::endl;
         }
@@ -153,5 +153,47 @@ int main() {
     } else {
         cout << "p6 is nullptr" << " p7=" << *p7 << endl;
     }
+
+    std::shared_ptr<int> p8(new int(42), [](int* a){
+        cout << "[p8] delete int " << *a << endl;
+        delete a;
+    });
+
+    // 定制智能指针 析构函数
+    std::shared_ptr<string> p9;
+    p9.reset(new string("hello"), [](string* str) {
+        cout << "[p9] delete string " << *str << endl;
+        delete str;
+    });
+
+    struct MyClass {
+        MyClass() { std::cout << "MyClass constructed" << std::endl; }
+        ~MyClass() { std::cout << "MyClass destroyed" << std::endl; }
+
+        void foo() {
+            std::cout << "foo called" << std::endl;
+        }
+    };
+    // scope_ptr<MyClass> ptr1(new MyClass()); // this is boost
+
+
+    class MyClass_1 : public std::enable_shared_from_this<MyClass_1> {
+    private:
+        int a{3};
+    public:
+        void doSomething() {
+            std::cout << "doSomething() called." << std::endl;
+            std::shared_ptr<MyClass_1> sharedPtr = shared_from_this();
+            // 使用sharedPtr进行其他操作
+            sharedPtr->foo();
+        }
+        void foo() {
+            std::cout << "foo() called. a=" << a << std::endl;
+        }
+    };
+    std::shared_ptr<MyClass_1> sharedPtr(new MyClass_1);
+    sharedPtr->doSomething();
+
+
     return 0;
 }

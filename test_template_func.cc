@@ -74,6 +74,7 @@ std::vector<T>& arrayRotate(const std::vector<T>& src) {
     // typename只能用于模板内
     typename T::iterator * _iter; // valid，依赖名，表明T::iterator是一个类型，而非变量
     // 如果不加typename之前 T::iterator * iter可能会被当成乘法表达式 (T::iterator)*iter
+    // 如果不想用这么麻烦，可以用别名，如 using Titer=T::iterator; Titer * iter;
 
     vector<int>::iterator iter_int; // valid，非依赖名
     typename std::vector<T>::iterator iter; // valid，依赖名，typname将该名称当成是类型，而非变量，消除歧义
