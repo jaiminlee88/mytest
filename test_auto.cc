@@ -15,7 +15,8 @@ void test1() {
 void test2() {
     cout << __FUNCTION__ << " start." << endl;
     int i=10;
-    auto a=i, &b=i,*c=&i;//a是int，b是i的引用，c是i的指针，auto就相当于int
+    auto a=i, &b=i,*c=&i;
+    // a是int，b是i的引用，c是i的指针，auto就相当于int
     // auto d=0, f=1.0;//error，0和1.0类型不同，对于编译器有二义性，没法推导
     // auto e;//error，使用auto必须马上初始化，否则无法推导类型
 }
@@ -38,6 +39,18 @@ void test3() {
     bool h2 = features()[1];
     cout << "h2=" << h2 << endl;
 }
+
+void test4() {
+    int x = 5;
+    auto y = x;
+    if (std::is_lvalue_reference<decltype(x)>::value) {
+        cout << "x is lvalue" << endl;
+    } else if (std::is_rvalue_reference<decltype(x)>::value) {
+        cout << "x is rvalue" << endl;
+    } else {
+        cout << "x is neither lvalue nor rvalue" << endl;
+    }
+}
 int main(int argc, char* argv[]) {
     cout << "entrance_func()" << endl;
     test1();
@@ -46,7 +59,7 @@ int main(int argc, char* argv[]) {
     test3();
     // 显式类型初始器惯用法是这样的：推荐这么用，auto就会严格按照类型推导
     // auto sum = static_cast<Matrix>(m1 + m2 + m3 + m4);
-
+    test4();
     double x,y;
     x = 1.0;
     y = 2.0;

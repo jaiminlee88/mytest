@@ -14,6 +14,10 @@ public:
     std::cout << gI << ":"
               << "move constructor\n";
   }
+  Book(const Book&& b) { // 移动构造函数是区分const的,尽量不要在移动时声明为const，否则可能会被转为拷贝操作，eg. string
+    std::cout << gI << ":"
+              << "const move constructor\n";
+  }
   Book(const Book &b) { // 常量
     std::cout << gI << ":"
               << "copy constructor\n";
@@ -33,7 +37,38 @@ public:
   }
 };
 
+class Widget {
+public:
+    Widget() {}
+    Widget(const Widget& rhs) { cout << "Widget(const Widget& rhs)" << endl; }
+    Widget(Widget&& rhs) { cout << "Widget(Widget&& rhs)" << endl; }
+    Widget& operator=(const Widget& rhs) { cout << "operator=(const Widget& rhs)" << endl; return *this; }
+    Widget& operator=(Widget&& rhs) { cout << "operator=(Widget&& rhs)" << endl; return *this; }
+};
+void process(const Widget& lvalArg) {        //处理左值
+    cout << "process(const Widget& lvalArg)" << endl;
+}
+void process(Widget&& rvalArg){ //处理右值
+    cout << "process(Widget&& rvalArg)" << endl;
+}
+template<typename T>
+void logAndProcess(T&& param) {//用以转发param到process的模板, 
+    // auto now = std::chrono::system_clock::now(); //获取现在时间
+    process(std::forward<T>(param)); // std::forward只有当它的参数被绑定到一个右值时，才将参数转换为右值。
+}
+
+void test1() {
+    Widget w;
+    logAndProcess(w); //传递左值，调用logAndProcess(T&),由于引用折叠规则，此时参数 param 的类型仍然是一个左值引用
+    logAndProcess(std::move(w)); //传递右值，调用
+}
+
 int main() {
+    //   C++11的移动语义并无优势：
+    // 没有移动操作：要移动的对象没有提供移动操作，所以移动的写法也会变成复制操作。
+    // 移动不会更快：要移动的对象提供的移动操作并不比复制速度更快。
+    // 移动不可用：进行移动的上下文要求移动操作不会抛出异常，但是该操作没有被声明为noexcept。
+    // 源对象是左值：除了极少数的情况外（例如Item25），只有右值可以作为移动操作的来源。
     int a = 1;
     int& b = a;
     cout << "1 a=" << a << " b=" << b << endl;
@@ -45,11 +80,14 @@ int main() {
     cout << "4 c=" << c << " b=" << b << " a=" << a << endl;
     int& d = c;
     cout << "5 d=" << d << " c=" << c << " b=" << b << " a=" << a << endl;
+    int&& d1 = std::move(d); // 变成右值引用
+    cout << "d1 typeid(d1).name() = " << typeid(d1).name() << endl;
     int&& e = '1';
     cout << "6 e=" << e << endl;
     e = '2';
     cout << "7 e=" << e << endl;
     int&& f = std::move(a); // 变成右值引用
+    cout << "f typeid(f).name() = " << typeid(f).name() << endl;
 
 
     gI = 0;
@@ -68,4 +106,10 @@ int main() {
     std::cout << gI << "-";
     origin = std::move(origin1); // 强制移动，将lvalue转换成xvalue，然后编译器会主动调用移动move,如果注释掉move就是就都是copy
     // move本身没有任何操作，类似标记
+
+    gI = 4;
+    const Book origin2(std::move(origin));
+    Book origin3(std::move(origin2));
+
+    test1();
 }

@@ -6,7 +6,7 @@ void abc() {
     throw "error xxxxabcabc.";
 }
 
-void def() noexcept { // 推荐使用noexcept关键字来声明不抛出异常，这样编译器可以优化代码。
+void def() noexcept { // 推荐使用noexcept关键字来声明不抛出异常，这样编译器可以优化代码，而且是极尽所能优化
 // void def() noexcept(false) { // 关闭异常抛出，编译器可以优化代码。
     std::cout << "run def..." << std::endl;
     throw "error xxxxdefdef.";
@@ -61,13 +61,18 @@ void lmn() {
     throw bad_msg_exception(100000, "hey hey hey");
 }
 
+void rst() noexcept(false) {
+    std::cout << "run rst..." << std::endl;
+    abc(); // 会抛出异常，noexcept并不会阻止异常的抛出。
+}
 int main() {
     try{
         // abc();
         // ghi();
         // def();
         // jkl();
-        lmn();
+        // lmn();
+        rst();
     } catch (const char* msg){
         std::cout << "catch exception: " << msg << std::endl;
     } catch (bad_msg msg){

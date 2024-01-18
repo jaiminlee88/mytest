@@ -106,6 +106,7 @@ void test1() {
     f_lref(x); //T是int，param的类型是int&
     f_lref(cx); //T是const int，param的类型是const int&
     f_lref(rx); //T是const int，param的类型是const int&, 注意即使rx的类型是一个引用，T也会被推导为一个非引用 ，这是因为rx的引用性（reference-ness）在类型推导中会被忽略
+    // f_lref(8); // invalid
     f_const_lref(x); //T是int，param的类型是const int&
     f_const_lref(cx); //T是int，param的类型是const int&
     f_const_lref(rx); //T是int，param的类型是const int&  rx的reference-ness在类型推导中被忽略了。
