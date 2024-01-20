@@ -144,7 +144,7 @@ void test1() {
 
     {
         cout << "4.auto类型推导：" << endl;
-        //auto类型推导和模板类型推导有一个直接的映射关系。它们之间可以通过一个非常规范非常系统化的转换流程来转换彼此。
+        // auto类型推导和模板类型推导有一个直接的映射关系。它们之间可以通过一个非常规范非常系统化的转换流程来转换彼此。
         // auto扮演了T的角色
         // 变量类型说明符扮演了ParamType的角色
         // 编译器认为每个变量都有一个模板，然后在合适地方初始化调用这个模板
@@ -188,10 +188,28 @@ void test1() {
     cout << "\n[test1 end]" << endl;
 }
 
- auto createInitList()
-        {
-            return { 1, 2, 3 };         //错误！不能推导{ 1, 2, 3 }的类型
-        }
+auto createInitList()
+    {
+        return { 1, 2, 3 };         //错误！不能推导{ 1, 2, 3 }的类型
+    }
+
+class Widget {
+public:
+    void addName(std::string newName) {         //接受左值或右值；移动它
+        names.push_back(std::move(newName));
+    }
+private:
+    std::vector<std::string> names;
+};
+
+void test2() {
+    Widget w;
+    std::string name("Bart");
+    w.addName(name);            //使用左值调用addName
+    w.addName(name + "Jenne");  //使用右值调用addName（见下）
+
+
+}
 int main() {
     int a = 1;
     int b = 2;
@@ -237,6 +255,7 @@ int main() {
     cout << "after j2:" << j2.name << " " << j2.salary << " " << j2.floor << endl;
 
     test1();
+    test2(); // 对于移动成本低且总是被拷贝的可拷贝形参，考虑按值传递
 }
 
 

@@ -323,6 +323,70 @@ void test8() {
     parallel_accumulate(b.begin(), b.end(), sum);
     cout << "sum=" << sum << endl;
 }
+
+void test9(){
+    cout << __func__ << " start..." << endl;
+    auto f = [](int a){
+        cout << "a=" << a << endl;
+        return;
+    };
+    std::thread t1(f, 1);
+
+    if (t1.joinable()) {
+        cout << "t1.joinable()=true" << endl;
+        t1.join();
+    } else {
+        cout << "t1.joinable()=false" << endl;
+    }
+    /*
+    joinable()返回true的情况：
+    对应于正在运行或者可能要运行的异步执行线程,对应于运行结束的线程的std::thread也可以认为是可结合的
+
+    joinable()返回false的情况：
+    默认构造的std::threads。这种std::thread没有函数执行，因此没有对应到底层执行线程上。
+    已经被移动走的std::thread对象。移动的结果就是一个std::thread原来对应的执行线程现在对应于另一个std::thread。
+    已经被join的std::thread 。在join之后，std::thread不再对应于已经运行完了的执行线程。
+    已经被detach的std::thread 。detach断开了std::thread对象与执行线程之间的连接。
+    */
+    std::thread t2;
+    if (t2.joinable()) {
+        cout << "t2.joinable()=true" << endl;
+        t2.join();
+    } else {
+        cout << "t2.joinable()=false" << endl;
+    }
+
+    std::thread t3(f, 3);
+    std::thread t4 = std::move(t3);
+    if (t3.joinable()) {
+        cout << "t3.joinable()=true" << endl;
+        t3.join();
+    } else {
+        cout << "t3.joinable()=false" << endl;
+    }
+    if (t4.joinable()) {
+        cout << "t4.joinable()=true" << endl;
+        t4.join();
+        if (t4.joinable()) {
+            cout << "in addition, t4.joinable()=true" << endl;
+        } else {
+            cout << "in addition, t4.joinable()=false" << endl;
+        }
+    } else {
+        cout << "t4.joinable()=false" << endl;
+    }
+
+    std::thread t5(f, 5);
+    t5.detach();
+    if (t5.joinable()) {
+        cout << "t5.joinable()=true" << endl;
+        t5.join();
+    } else {
+        cout << "t5.joinable()=false" << endl;
+    }
+
+    cout << __func__ << " end..." << endl;
+}
 int main() {
     // test0();
     // test1();
@@ -332,7 +396,9 @@ int main() {
     // test5(); // 移动参数，而不是复制
     // test6(); // 转移线程权限
     // test7(); // 使用joining_thread来管理线程权限
-    test8();
+    // test8(); 
+    test9(); // joinable()
+    
     sleep(1);
     cout << "main thread exit" << endl;
 }

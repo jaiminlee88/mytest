@@ -36,12 +36,23 @@ int main() {
         trdkit::OIDGen* _oidGen11 = trdkit::OIDGen::factory("localtime", it);
         unsigned int oid11 = _oidGen11->next32();
         if (oid11 < a)
-            std::cout << "oid11: " << oid11 << " < " << a << std::endl;
+            std::cout << "oid11=" << oid11 << " " << oid11 << " < " << a << std::endl;
         else
-            std::cout << "oid11: " << oid11 << " >= " << a << std::endl;
+            std::cout << "oid11=" << oid11 << " " << oid11 << " >= " << a << std::endl;
         // delete _oidGen11;
         cout << endl;
     }
+
+    int prefix = 15;
+    trdkit::OIDGen* _oidGen12 = trdkit::OIDGen::factory("localtime", prefix);
+    int i = 500;
+    cout << "gen 1000 oids: ";
+    while(i) {
+        i--;
+        // continue;
+        cout << "prefix=" << prefix << " oid=" << _oidGen12->next32() << endl;
+    }
+    cout << endl;
 
     int b = 1;
     b = b << 27;

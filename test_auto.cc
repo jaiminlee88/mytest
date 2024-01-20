@@ -69,6 +69,13 @@ int main(int argc, char* argv[]) {
     cout << "sum2=" << sum2 << endl;
     int sum3(x+y);
     cout << "sum3=" << sum3 << endl;
+
+    const int x1 = 5;
+    // x = 6; // invalid
+    auto y1 = x1;
+    cout << "before y1=" << y1 << endl;
+    y1 = 7; // 已经把const int x1的const属性去掉了
+    cout << "after  y1=" << y1 << endl;
     return 0;
 }
 

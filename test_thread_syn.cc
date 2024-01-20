@@ -197,6 +197,11 @@ double square_root(double x) {
     return sqrt(x);
 }
 void test3(){
+    // 基于任务的方法总是好于基于线程的方法
+    // 基于任务的方法可以捕捉异常，基于线程的方法不能捕捉异常
+    // 基于线程的编程方式需要手动的线程耗尽、资源超额、负责均衡、平台适配性管理。
+    // 通过带有默认启动策略的std::async进行基于任务的编程方式会解决大部分问题
+    // 基于任务的方法可以自行管理资源，不会oversubscription
     int cnt = 1;
     std::future<int> the_answer = std::async([](int& cnt){
         while(cnt--) {
@@ -240,7 +245,17 @@ void test3(){
     };
     auto f6 = std::async(move_only()); // 临时move_only,通过move_only的移动构造函数传递给f6 即std::move(move_only())构造得到
 
-    auto f7 = std::async(std::launch::async, Y(), 1.2); // 强制在新线程执行, async必须在新线程执行
+    /*
+    std::async是C++11标准中提供的一个函数模板，用于实现多线程的异步操作。它可以通过不同的参数配置来指定是同步执行还是异步执行。
+
+    同步执行（std::launch::deferred）：当使用std::launch::deferred参数调用std::async时，任务不会在调用std::async的线程中立即执行，而是在调用std::async的get()函数时，由调用get()函数的线程执行。也就是说，任务的执行将被延迟到调用get()函数时，且在调用get()函数的线程中执行。
+
+    异步执行（std::launch::async）：当使用std::launch::async参数调用std::async时，任务会立即在线程池中启动一个新的线程执行，并返回一个std::future<T>对象，用于获取异步操作的结果。通过调用std::future<T>的get()函数，可以等待并获取任务执行完成后返回的结果。
+
+    总结来说，同步执行是在调用get()函数时执行任务，而异步执行是在调用std::async函数时立即开启一个新线程执行任务，并返回一个std::future<T>对象。可以通过std::launch::deferred和std::launch::async参数来控制使用哪种执行方式。
+    */
+
+    auto f7 = std::async(std::launch::async, Y(), 1.2); // 强制在新线程执行, async必须在新线程执行, 不能在当前线程执行
     cout << "init f7=" << f7.get() << endl;
     auto f8 = std::async(std::launch::deferred, baz, std::ref(x), "f8"); // 延迟调用,直到调用f8.get()或f8.wait()才执行
     cout << "init deferred f8=" << endl;
@@ -281,8 +296,20 @@ void test4(){
     std::packaged_task<int(int)> task4([](int i){ throw std::runtime_error("test"); return i*2;});
     std::future<int> f4 = task4.get_future();
     std::thread t4(std::move(task4), 10);
-    cout << "task3 result=" << f4.get() << endl; // 抛出异常，会被future捕捉, 不get则不会抛出
+    // cout << "task4 result=" << f4.get() << endl; // 抛出异常，会被future捕捉, 不get则不会抛出
     t4.join();
+
+    {
+        std::packaged_task<int(int)> task5([](int i){
+            // cout << "task5 start...." << endl;
+            return i*2;
+        });
+        std::future<int> f5 = task5.get_future();
+        std::thread t5(std::move(task5), 10);
+        cout << "task5 result=" << f5.get() << endl;
+        t5.join(); // still need to join
+    }
+    cout << __func__ << " end..." << endl;
 }
 
 void calculateResult(std::promise<int>& promiseObj) {
@@ -348,6 +375,11 @@ void threadsafe_log(std::string msg) {
 
 
 void test6(){
+    /*
+    future 和 promise之间有个共享状态（shared state），存放在堆中
+    引用了共享状态——使用std::async启动的 未延迟任务 建立的那个——的最后一个future的析构函数会阻塞住，直到任务完成。本质上，这种future的析构函数对执行异步任务的线程执行了隐式的join。
+    其他所有future的析构函数简单地销毁future对象。对于异步执行的任务，就像对底层的线程执行detach。对于延迟任务来说如果这是最后一个future，意味着这个延迟任务永远不会执行了。
+    */
     std::promise<int> p;
     // 例子1，以下所有例子都可以用
     // std::future<int> f = p.get_future();
@@ -884,19 +916,37 @@ void test12() {
     test_packaged_task_4();
 }
 
+void f(){                    //f休眠1秒，然后返回
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+}
+void test13() {
+    cout << __func__ << " start." << endl;
+    auto fut = std::async(f);           //异步运行f（理论上）
+    if (fut.wait_for(std::chrono::milliseconds(0)) == std::future_status::deferred) {
+        cout << __func__ << " deferred." << endl;
+    } else {
+        while (fut.wait_for(std::chrono::milliseconds(100)) !=       //循环，直到f完成运行时停止...
+            std::future_status::ready)   //但是有可能永远不会发生！
+        {
+            cout << __func__ << " waiting..." << endl;
+        }
+    }
+    cout << __func__ << " done." << endl;
+}
 int main() {
     // test1(); // test condition_variable
     // test2(); // test threadsafe queue
     // test3(); // future async, 一个future只能get一次, asynck可能是硬件并发最好的
-    // test4(); // packaged_task
-    // test5(); // std::promise
+    test4(); // packaged_task
+    // test5(); // std::promise , 与future配合使用，promise只能set一次，使用了堆内存存储共享状态，
     // test6(); // shared_future，多个线程共享一个future，
     // test7(); // test chrono
     // test8(); // quick sort
     // test9(); // CSP Communicating Sequential Processer 通信顺序处理 actor model
     // test10(); // atomic flag
-    test11(); // atomic 要求不能拷贝构造或拷贝赋值，因赋值和拷贝调用了两个对象，这就就破坏了操作的原子性
-    test12(); // std::packaged_task 测试
+    // test11(); // atomic 要求不能拷贝构造或拷贝赋值，因赋值和拷贝调用了两个对象，这就就破坏了操作的原子性
+    // test12(); // std::packaged_task 测试
+    // test13();
 
     // std::condition_variable cv;
     // std::mutex cv_mutex;
