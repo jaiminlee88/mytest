@@ -96,6 +96,8 @@ public:
 
 
 int main(int argc, char* argv[]) {
+    // 注意，如果不virtual，表明该类不会作为基类，内部成员如果是32位的可以直接塞进64位寄存器，移植性很好
+    // 如果是virtual，表明该类会作为基类，会有vptr指针指向vtbl，结构变化，不再具有移植性
     A* pa = new B();
     B* pb = dynamic_cast<B*>(pa);
     cout << endl;

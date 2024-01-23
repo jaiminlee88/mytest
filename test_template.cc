@@ -193,9 +193,28 @@ auto createInitList()
         return { 1, 2, 3 };         //错误！不能推导{ 1, 2, 3 }的类型
     }
 
-class Widget {
+// class Widget {                                  //方法1：对左值和右值重载
+// public:
+//     void addName(const std::string& newName)
+//     { names.push_back(newName); } // rvalues
+//     void addName(std::string&& newName)
+//     { names.push_back(std::move(newName)); }
+//     …
+// private:
+//     std::vector<std::string> names;
+// };
+
+// class Widget {                                  //方法2：使用通用引用，可能会展开各种各样的函数
+// public:
+//     template<typename T>
+//     void addName(T&& newName)
+//     { names.push_back(std::forward<T>(newName)); }
+//     …
+// };
+
+class Widget {                                   // 方法3：使用传值，对于类可能会产生对象切片问题
 public:
-    void addName(std::string newName) {         //接受左值或右值；移动它
+    void addName(std::string newName) {         //接受左值或右值；移动它，
         names.push_back(std::move(newName));
     }
 private:
@@ -203,6 +222,9 @@ private:
 };
 
 void test2() {
+    // 对于移动成本低 且 总是被拷贝的可拷贝形参，考虑按值传递
+    // 对比三种方法的开销，如果差不多，就用传值，也不会函数膨胀
+    // 如果开销明确很大，那就用引用
     Widget w;
     std::string name("Bart");
     w.addName(name);            //使用左值调用addName

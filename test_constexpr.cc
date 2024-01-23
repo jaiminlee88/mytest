@@ -58,6 +58,10 @@
 
 
 #include <iostream>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+
 using namespace std;
 //自定义类型的定义
 struct myType {
@@ -99,6 +103,8 @@ constexpr Point midpoint(const Point& p1, const Point& p2) noexcept {
              (p1.yValue() + p2.yValue()) / 2 }; //成员函数
 }
 
+
+
 int main() {
     // constexpr对象是const，它被在编译期可知的值初始化
     // 当传递编译期可知的值时，constexpr函数可以产出编译期可知的结果
@@ -123,5 +129,6 @@ int main() {
     constexpr auto mid = midpoint(p1, p2);      //使用constexpr函数的结果
                                             //初始化constexpr对象
     cout << "mid.xValue()=" << mid.xValue() << " mid.yValue()=" << mid.yValue() << endl;
+
     return 0;
 }

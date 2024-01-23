@@ -37,6 +37,25 @@ std::unique_ptr<T> make_unique(Ts&&... params) {
 }
 #endif
 
+int priority() {
+    return 1;
+}
+
+void func1(std::shared_ptr<int> p, int i, int priority_ret) { // 注意，如果加载pf
+    cout << "[func1] priority_ret=" << priority_ret << " p.use_count=" << p.use_count() << " i=" << i << endl;
+}
+
+void test1() {
+    int a  = 80;
+    // 先调用priority，再new，再shared_ptr构造函数
+    // 注意，如果先new，再调用priority，再调用shared_ptr构造函数，一旦priority抛出异常，会导致内存泄漏。这个形式不推荐
+    // func1(std::shared_ptr<int>(new int(10)), a, priority()));
+
+    // 推荐，分离它，即使priority抛出异常，也不会导致内存泄漏
+    std::shared_ptr<int> p(new int(10));
+    func1(p, a, priority());
+}
+
 int main() {
     // 智能指针内存安全，不会抛出错误 没有潜在的资源泄漏
     // std::auto_ptr<double> pd(new double(5.6));
@@ -312,6 +331,6 @@ int main() {
     std::shared_ptr<MyClass_1> sharedPtr(new MyClass_1);
     sharedPtr->doSomething();
 
-
+    test1(); // shared_ptr作为参数调用裸指针，要分离出来
     return 0;
 }

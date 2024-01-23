@@ -29,23 +29,23 @@ int main() {
     std::cout << endl;
 
     // _oidGen为单例模式，不需要主动释放
-    vector<int> v{1,5,10,11,20,21,22,25,0};
+    vector<int> v{1,5,10,11,20,21,22,25,41,42,43,0};
     trdkit::OIDGen* _oidGen11{nullptr};
     for (auto& it : v) {
         cout << "trdkit::OIDGen::factory(\"localtime\", " << it << ")" << endl;
         trdkit::OIDGen* _oidGen11 = trdkit::OIDGen::factory("localtime", it);
         unsigned int oid11 = _oidGen11->next32();
-        if (oid11 < a)
-            std::cout << "oid11=" << oid11 << " " << oid11 << " < " << a << std::endl;
+        if (oid11 < std::numeric_limits<int>::max())
+            std::cout << "oid11=" << oid11 << " " << oid11 << " < std::numeric_limits<int>::max()=" << std::numeric_limits<int>::max() << std::endl;
         else
-            std::cout << "oid11=" << oid11 << " " << oid11 << " >= " << a << std::endl;
+            std::cout << "oid11=" << oid11 << " " << oid11 << " >= std::numeric_limits<int>::max()=" << std::numeric_limits<int>::max() << std::endl;
         // delete _oidGen11;
         cout << endl;
     }
 
     int prefix = 15;
     trdkit::OIDGen* _oidGen12 = trdkit::OIDGen::factory("localtime", prefix);
-    int i = 500;
+    int i = 100;
     cout << "gen 1000 oids: ";
     while(i) {
         i--;

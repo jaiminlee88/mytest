@@ -14,7 +14,7 @@ private:
 class func1 {
 public:
     // 没有构造函数，编译器默认创建
-    // 没有析构函数，编译器默认创建
+    // 没有析构函数，编译器默认创建, 注意是 non-virtual的，除非 该类的 基类的 析构函数 是virtual的，否则不会生成virtual析构函数
     // 没有复制构造函数，编译器默认创建，注意，默认行为可能与预期不同， func1(const func1 & i)
     // 没有移动构造函数，而又需要使用到，则编译器自动创建一个 func1(func1 &&i)，注意不能有const
     // 没有赋值运算符，编译器默认创建，注意，默认行为可能与预期不同 func1& operator=(func1 & i)
@@ -109,6 +109,59 @@ public:
 
 int func1::obj_cnt = 0;
 
+class func3 {
+public:
+    // func3() {} // default
+    // ~func3() {}// default
+    // func3(func3& i);// default
+    // operator=(func3& i);// default
+    void print_mem() { cout << "func3 print_mem a=" << a << " b=" << b << endl;}
+    void set_b(int i) { b = i;}
+private:
+    const static int a = 4;
+    int b = 5;
+};
+
+class func4 {
+public:
+    // func4() {} // default
+    // ~func4() {}// default
+    // operator=(func4& i);// default
+    func4(int& i, const int& j) : a(i),b(j) {} // invalid
+    void print_mem() { cout << "func4 print_mem a=" << a << " b=" << b << endl;}
+private:
+    func4(func4& i);// derivative class不会生成默认的复制构造函数,可以用来禁止复制
+    int& a;
+    const int b = 5;
+};
+
+// class func5 : public func4 {
+// public:
+//     func5(func5& i) {} // invalid derivative class不会生成默认的复制构造函数
+// };
+void test1() {
+    func3 f3;
+    f3.print_mem();
+    f3.set_b(10);
+    func3 f4(f3); // 复制构造函数
+    func3 f5 = f3; // 复制构造函数
+    f4.print_mem();
+    f5.print_mem();
+
+    int a = 10;
+    int b = 11;
+    // func4 f6(a); // invalid
+    func4 f7(a,b);
+    f7.print_mem();
+    int c = 12;
+    int d = 13;
+    func4 f8(c,d);
+    f8.print_mem();
+    // f7 = f8; // invalid, 更改const不合法，引用成员a不会自动赋值，需要自己实现赋值操作符
+
+    // func5 f9(); // derivative class不会生成默认的复制构造函数
+}
+
 int main() {
     func1 c; // 调用默认构造函数
     c = 2.8; // 用func1_double初始化一个func1，再复制到c中
@@ -138,5 +191,8 @@ int main() {
     f.print(3.4); // 用的func2的print
     f.print(3); // 用的func1的print。如果不用using func1::print，会统一用func2的print
     func2 f1(10.0); // using强制继承基类构造函数，只初始化基类成员，派生成员需要使用初始化列表方法（派生构造函数，初始化列表调用基类构造函数），
+
+    test1();
+    
     return 0;
 }

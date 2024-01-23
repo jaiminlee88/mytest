@@ -112,4 +112,28 @@ int main() {
     Book origin3(std::move(origin2));
 
     test1();
+
+    int g = 1;
+    if (std::is_lvalue_reference<decltype(std::move(g))>::value) {
+        cout << "std::move(g) is lrvalue" << endl;
+    } else if (std::is_rvalue_reference<decltype((std::move(g)))>::value) {
+        cout << "std::move(g) is rrvalue" << endl;
+    } else {
+        cout << "std::move(g) is not lvalue or rvalue" << endl;
+    }
+    if (std::is_lvalue_reference<decltype(std::move("a"))>::value) {
+        cout << "std::move(\"a\") is lrvalue" << endl;
+    } else if (std::is_rvalue_reference<decltype(std::move("a"))>::value) {
+        cout << "std::move(\"a\") is rrvalue" << endl;
+    } else {
+        cout << "std::move(\"a\") is not lvalue or rvalue" << endl;
+    }
+    int&& g1 = std::move(g);
+    if (std::is_lvalue_reference<decltype(g1)>::value) {
+        cout << "std::move(g1) is lrvalue" << endl;
+    } else if (std::is_rvalue_reference<decltype(g1)>::value) {
+        cout << "std::move(g1) is rrvalue" << endl;
+    } else {
+        cout << "std::move(g1) is not lvalue or rvalue" << endl;
+    }
 }

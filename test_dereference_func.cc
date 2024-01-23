@@ -37,6 +37,7 @@ int main(){
     cout << "after !a2>>=" << (int)(!a2); // 非
     cout << "after ~a2>>=" << (int)(~a2) << "  0b11110000=" <<(int)(0b11110000) << endl; // 位非
 
+    // 特殊指针
     int Example::* pt = &Example::feet; // 指向类成员的指针,不指向特定内存单元，指向任意example对象中的位置，相当于给成员变量定义了一个特殊指针(相当于成员名)
     Example ob1(1,2);
     Example ob2(3,4);
