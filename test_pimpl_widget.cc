@@ -1,6 +1,7 @@
 
 #include "./test_pimpl_widget.hh"
 #include "./test_pimpl_gadget.hh"
+#include <iostream>
 
 #if __cplusplus <= 201103L
 template<typename T, typename... Ts>
@@ -27,3 +28,14 @@ Widget::~Widget() {
     // 不要使用默认析构函数，会增加一些代码，其中一段是static_assert检查是否完整类型，如果不是，就会报错 ,暗含inline
 }
 // Widget::~Widget() = default;        //同上述代码效果一致
+
+struct abc{
+    int a{100};
+    int b{200};
+};
+void Widget::func1(abc* g) {
+    std::cout << "Widget::func1(abc* g) g->a=" << g->a << std::endl;
+}
+void Widget::func2(abc& g) {
+    std::cout << "Widget::func2(abc& g) g->a=" << g.a << std::endl;
+}

@@ -10,7 +10,7 @@ private:
 class Test2
 {
 public :
-	explicit Test2(int num):n(num){} // 可以防止单构造函数的隐式转换，把错误扼杀于编译阶段
+	explicit Test2(int num):n(num){} // 可以防止单构造函数的隐式转换，把错误扼杀于编译阶段，只有构造函数和转换函数才能使用explicit
 private:
 	int n;
 };

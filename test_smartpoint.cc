@@ -56,6 +56,38 @@ void test1() {
     func1(p, a, priority());
 }
 
+void test2 () {
+    cout << "test2==========" << endl;
+    struct node {
+        int data;
+        int data1;
+    };
+    std::shared_ptr<node> p(new node{1, 2});
+    cout << p->data1 << endl;
+    cout << p.get()->data1 << endl;
+    std::shared_ptr<node> p1;
+    // cout << p1.get()->data1 << endl;
+    if (p1 == nullptr) {
+        cout << "p1 is nullptr" << endl;
+    } else {
+        cout << "p1 is not nullptr" << endl;
+    }
+
+    struct node1 {
+        int data;
+        std::shared_ptr<node1> left;
+        std::shared_ptr<node1> right;
+    };
+    std::shared_ptr<node1> p2(new node1{1, nullptr, nullptr});
+    std::shared_ptr<node1> p3(new node1{2, nullptr, nullptr});
+    p2->left = p3;
+    cout << p2->data << endl;
+    cout << p2->left->data << endl;
+    cout << p2->left.get()->data << endl;
+    std::shared_ptr<node1> p4;
+    p4 = p2;
+    
+}
 int main() {
     // 智能指针内存安全，不会抛出错误 没有潜在的资源泄漏
     // std::auto_ptr<double> pd(new double(5.6));
@@ -332,5 +364,6 @@ int main() {
     sharedPtr->doSomething();
 
     test1(); // shared_ptr作为参数调用裸指针，要分离出来
+    test2(); // struct node
     return 0;
 }

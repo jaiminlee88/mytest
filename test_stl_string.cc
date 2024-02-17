@@ -4,6 +4,24 @@
 
 using namespace std;
 
+
+void mystrcpy(char* dst, const char* src) {
+    if (dst == nullptr || src == nullptr) {
+        return;
+    }
+    while(*src != '\0') {
+        *dst = *src;
+        ++dst;
+        ++src;
+    }
+}
+void test1() {
+    char* dst = new char[1024];
+    const char* src = "this is a static string";
+    mystrcpy(dst, src);
+    cout << "dst: " << dst << endl;
+    delete[] dst;
+}
 int main() {
     // g++ -O0 -o static_str static_str.cc -std=c++17 -g && objdump -S -t -D static_str > static_str.s
 
@@ -83,4 +101,6 @@ int main() {
 
     string str5 = "static";
     cout << "str5[1] =" << str5[1] << endl;
+
+    test1(); // strcpy
 }

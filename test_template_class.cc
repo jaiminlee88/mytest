@@ -1,4 +1,7 @@
 #include<iostream>
+#include <vector>
+#include <set>
+
 using namespace std;
 
 template <class Type>
@@ -186,6 +189,256 @@ void show2(C & c,D &d) {
 template<typename T>
 using MFtype = ManyFriend<T>;
 
+class companyA {
+public:
+    void sendClearText(const std::string & msg) {
+        std::cout << "companyA sendClearText: " << msg << std::endl;
+    }
+    void sendEncrypted(const std::string & msg) {
+        std::cout << "companyA sendEncrypted: " << msg << std::endl;
+    }
+};
+class companyB {
+public:
+    void sendClearText(const std::string & msg) {
+        std::cout << "companyB sendClearText: " << msg << std::endl;
+    }
+    void sendEncrypted(const std::string & msg) {
+        std::cout << "companyB sendEncrypted: " << msg << std::endl;
+    }
+};
+class companyZ {
+public:
+    void sendEncrypted(const std::string & msg) {
+        std::cout << "companyZ sendEncrypted: " << msg << std::endl;
+    }
+};
+template<typename T>
+class MsgSender {
+public:
+    void sendClear(const std::string & msg) {
+        T t;
+        t.sendClearText(msg);
+    }
+};
+
+template<>
+class MsgSender<companyZ> {
+public:
+    // 特例化，但是没有 sendClear这个通用模板的函数，所以会报错
+    void sendSecret(const std::string & msg) {
+        companyZ z;
+        z.sendEncrypted(msg);
+    }
+};
+
+template<typename T>
+class loggingMsgSender : public MsgSender<T> {
+public:
+    // 不能直接使用sendClear
+    // 方案一，
+    void sendClearMsg(const std::string & msg) {
+        std::cout << "loggingMsgSender sendClearMsg: " << msg << std::endl;
+        // sendClear(msg); // invalid 因为此时并不知道 MsgSender<T> 的具体类型，无法实例化，所以要用 this->sendClear(msg)
+        this->sendClear(msg); // valid, 假设sendClear可以被继承
+    }
+    // 方案二，using MsgSender<T>::sendClear; // valid
+    using MsgSender<T>::sendClear; // 高速编译器，假设sendClear在base class内，编译器不进入base内寻找，而是直接通过using告诉它
+    void sendClearMsg2(const std::string & msg) {
+        std::cout << "loggingMsgSender sendClearMsg2: " << msg << std::endl;
+        sendClear(msg); // valid
+    }
+    // 方案三，using MsgSender<T>::sendClear; // valid
+    void sendClearMsg3(const std::string & msg) {
+        std::cout << "loggingMsgSender sendClearMsg3: " << msg << std::endl;
+        MsgSender<T>::sendClear(msg); // valid假设sendClear将被继承下来
+    }
+};
+
+
+void test1() {
+    cout << "[test1]================start===============" << endl;
+    loggingMsgSender<companyA> lms;
+    lms.sendClearMsg("hello");
+    lms.sendClearMsg2("hello");
+    lms.sendClearMsg3("hello");
+
+    // loggingMsgSender<companyZ> lms2; // 报错
+}
+
+
+template<typename T, std::size_t n> // 代码膨胀
+class SquareMatrix {
+public:
+    void invert() {
+        std::cout << "SquareMatrix invert" << std::endl;
+    }
+};
+
+template<typename T> // 只有一个base了
+class SquareMatrixBase {
+protected:
+    void invert(std::size_t matrixSize) {
+        std::cout << "SquareMatrixBase invert matrixSize=" << matrixSize << std::endl;
+    }
+};
+
+template<typename T, std::size_t n>
+class SquareMatrix_1 : private SquareMatrixBase<T> {
+private:
+    using SquareMatrixBase<T>::invert;
+public:
+    void invert() {
+        this->invert(n);
+    }
+};
+void test2() {
+    cout << "[test2]================start===============" << endl;
+    SquareMatrix<double, 5> sm; // 生成两个模板，代码膨胀
+    sm.invert();
+    SquareMatrix<double, 10> sm1;
+    sm1.invert();
+
+    SquareMatrix_1<double, 15> sm2; // 生成一个模板，代码不膨胀
+    sm2.invert();
+    SquareMatrix_1<double, 20> sm3;
+    sm3.invert();
+}
+
+
+template <typename T>
+class SmartPtr {
+public:
+    SmartPtr(SmartPtr & other) : heldPtr(other.get()) { // copy构造函数
+        std::cout << "SmartPtr copy constructor" << std::endl;
+    }
+    template<typename U>
+    SmartPtr(const SmartPtr<U> & other) : heldPtr(other.get()) { // 泛化copy构造函数
+        std::cout << "SmartPtr general copy constructor" << std::endl;
+    }
+    T* get() const { return heldPtr; }
+private:
+    T * heldPtr;
+};
+
+template<typename T>
+class Rational {
+public:
+    Rational(const T & numerator = 0, const T & denominator = 1) : n(numerator), d(denominator) {
+        std::cout << "Rational constructor" << std::endl;
+    }
+    template<typename U>
+    Rational(const Rational<U> & other) : n(other.n), d(other.d) {
+        std::cout << "Rational general copy constructor" << std::endl;
+    }
+    friend const Rational operator*(const Rational & lhs, const Rational & rhs){
+        std::cout << "const Rational<T> operator*" << std::endl;
+        return Rational<T>(lhs.n * rhs.n, lhs.d * rhs.d);
+    }
+    // 1、operator*的参数const Rational可以不写 const Rational<T>，简略表达，可加可不加
+    // 2、friend const Rational operator* 混合式调用
+    //    不加friend，oneHalf * 2的参数2不会被隐式转换为Rational<int>，
+    //    friend声明方式可以指涉某个特定函数，而不是通过template推导出来，在声明Rational<int> oneHalf(1,2)时，operator*函数被声明出来
+    //    Rationa<int>时，operator*顺带被自动声明出来，然后调用非模板函数
+    // 3、operator*函数的实现必须在模板内部，否则链接不通过
+    //    目前只是声明，没有定义，链接不通过，
+    //    template要求声明，就一定要定义，写在外边链接无法通过
+private:
+    T n, d;
+};
+// template<typename T> // 写在外部无效
+// const Rational<T> operator*(const Rational<T> & lhs, const Rational<T> & rhs) {
+//     std::cout << "const Rational<T> operator*" << std::endl;
+//     return Rational<T>(lhs.n * rhs.n, lhs.d * rhs.d);
+// }
+
+void test3(){
+    cout << "[test3]================start===============" << endl;
+    // template不做隐式类型转换
+    Rational<int> oneHalf(1,2);
+    Rational<int> result = oneHalf * 2; // template本身不能隐式转换，通过声明为friend函数，告诉template不要用推导，可以实现隐式转换
+}
+
+template<typename IterT, typename DistT>
+void my_advance(IterT& iter, DistT d) {
+    std::cout << "advance" << std::endl;
+    // 判断通过结构体tag判断迭代器类型
+    if (typeid(typename std::iterator_traits<IterT>::iterator_category) 
+      == typeid(std::random_access_iterator_tag)) { // if运行期间才知道，iterator_category编译期间知道，不合理，代码膨胀
+        std::cout << "random_access_iterator_tag" << std::endl;
+        iter += d;
+    } else {
+        std::cout << "not random_access_iterator_tag" << std::endl;
+        if (d >= 0) {
+            while (d--) ++iter;
+        } else {
+            while (d++) --iter;
+        }
+    }
+}
+// 更好迭代器选择实现,overload，将判断放在编译期间，参数可以提前确定改用哪个模板
+// 思路很棒，典型traits class用法，根据参数生成相应函数模板，在编译期间可用
+template<typename IterT, typename DistT>
+void doAdvance(IterT& iter, DistT d, std::random_access_iterator_tag) {
+    std::cout << "doAdvance(IterT& iter, DistT d, std::random_access_iterator_tag)" << std::endl;
+    iter += d;
+}
+template<typename IterT, typename DistT>
+void doAdvance(IterT& iter, DistT d, std::bidirectional_iterator_tag) {
+    std::cout << "doAdvance(IterT& iter, DistT d, std::bidirectional_iterator_tag)" << std::endl;
+    if (d >= 0) {
+        while (d--) ++iter;
+    } else {
+        while (d++) --iter;
+    }
+}
+template<typename IterT, typename DistT>
+void doAdvance(IterT& iter, DistT d, std::input_iterator_tag) {
+    cout << "doAdvance(IterT& iter, DistT d, std::input_iterator_tag)" << endl;
+    if (d < 0) {
+        throw std::out_of_range("negative distance");
+    }
+    while(d--) ++iter;
+}
+template<typename IterT, typename DistT>
+void my_advance_1(IterT& iter, DistT d) {
+    doAdvance(iter,
+               d,
+               typename std::iterator_traits<IterT>::iterator_category() // 决定了调用哪个版本，效率比typeid高
+            );
+}
+
+void test4 () {
+    // 五种迭代器
+    // 1、输入迭代器：只读，只能单步向前迭代，只能使用一次 istream_iterator
+    // 2、输出迭代器：只写，只能单步向前迭代，只能使用一次 ostream_iterator
+    // 3、前向迭代器：可读写，只能单步向前迭代，可多次使用 slist
+    // 4、双向迭代器：可读写，可双向迭代，可多次使用 set multiset map multimap
+    // 5、随机访问迭代器：可读写，可双向迭代，可多次使用，支持算术运算， vector,string deque
+    // 对应专属tag struct
+    // 1、struct input_iterator_tag{}
+    // 2、struct output_iterator_tag{}
+    // 3、struct forward_iterator_tag : public input_iterator_tag{}
+    // 4、struct bidirectional_iterator_tag : public forward_iterator_tag{}
+    // 5、struct random_access_iterator_tag : public bidirectional_iterator_tag{}
+    // 本质上，在tempalte内部设置专属tag struct，然后根据tag struct的类型，选择合适的迭代器
+
+    // 有些迭代器可以 iter+=1，有些只能iter++或者iter--
+    cout << "[test4]================start===============" << endl;
+    std::vector<int> v{1,2,3,4,5};
+    std::vector<int>::iterator it = v.begin();
+    my_advance(it, 2);
+    std::cout << "after my_advance(it, 2), *it="<< *it << std::endl;
+
+    std::vector<int>::iterator it1 = v.begin();
+    my_advance_1(it1, 2);
+    std::cout << "after my_advance_1(it1, 2), *it1="<< *it1 << std::endl;
+
+    std::set<int> m{1,2,3,4,5,6};
+    std::set<int>::iterator it2 = m.begin();
+    my_advance_1(it2, 2);
+    std::cout << "after my_advance(it2, 2), *it2="<< *it2 << std::endl;
+}
 // 在C++中，模板是一种用于生成通用代码的机制，可以根据模板参数的不同来生成特定类型或值的代码。模板的实例化（Instantiation）和具体化（Specialization）是模板的两个重要概念。
 
 // 实例化（Instantiation）：模板实例化是指将模板用具体的类型或值来替换模板参数，从而生成针对特定类型或值的代码。当程序中使用模板时，编译器会在需要的时候进行模板实例化。实例化是根据模板定义和使用的上下文，在编译时自动生成特定的代码。例如，当我们使用 std::vector<int> 实例化模板 std::vector<T> 时，编译器会根据模板定义，在编译时生成一个针对 int 类型的 vector 类。实例化是编译时的过程，和编译期上下文相关。
@@ -253,5 +506,16 @@ int main() {
     cout << endl;
     MFtype<int> MFtype_int;
     MFtype<double> MFtype_double;
+
+    test1();
+    test2();
+    test3(); // 隐式转换
+    // 五种迭代器
+    // 1、输入迭代器：只读，只能单步向前迭代，只能使用一次 istream_iterator
+    // 2、输出迭代器：只写，只能单步向前迭代，只能使用一次 ostream_iterator
+    // 3、前向迭代器：可读写，只能单步向前迭代，可多次使用 slist
+    // 4、双向迭代器：可读写，可双向迭代，可多次使用 set multiset map multimap
+    // 5、随机访问迭代器：可读写，可双向迭代，可多次使用，支持算术运算， vector,string deque
+    test4(); // 根据traits class表现类型信息选择迭代器
     return 0;
 }

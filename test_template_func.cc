@@ -75,6 +75,7 @@ std::vector<T>& arrayRotate(const std::vector<T>& src) {
     typename T::iterator * _iter; // valid，依赖名，表明T::iterator是一个类型，而非变量
     // 如果不加typename之前 T::iterator * iter可能会被当成乘法表达式 (T::iterator)*iter
     // 如果不想用这么麻烦，可以用别名，如 using Titer=T::iterator; Titer * iter;
+    // typename 只能用来验明 嵌套从属类型 名称 xxx::yyy，其他名称都不应该出现
 
     vector<int>::iterator iter_int; // valid，非依赖名
     typename std::vector<T>::iterator iter; // valid，依赖名，typname将该名称当成是类型，而非变量，消除歧义
@@ -84,6 +85,23 @@ std::vector<T>& arrayRotate(const std::vector<T>& src) {
 	return dst;
 }
 
+
+template<typename C>
+void print2nd(const C& container) {
+    if (container.size() >= 2) {
+        typename C::const_iterator iter(container.begin()); // typename将该名称当成是类型，而非变量，消除歧义
+        ++iter;
+        int value = *iter;
+        cout << value << endl;
+    }
+}
+
+void test1(){
+    cout << "[test1]====================" << endl;
+    print2nd(std::vector<int>{1,2,3,4,5});
+
+
+}
 int main() {
     Stack<int> kernels;
     Stack<std::string> colonels;
@@ -117,5 +135,6 @@ int main() {
     }
     cout << "] from stack colonels;" << endl;
 
+    test1();
     cout << "done" << endl;
 }

@@ -42,6 +42,114 @@ private:
 
 // static int stock1::i = 0; //必须省略static，原来static变量在编译单元内的定义必须是全局的
 int stock1::i = 0;
+
+class base {
+public:
+    base(){
+        cout << "base::base() construct" << endl;
+    }
+    virtual ~base(){
+        cout << "base::~base() destruct" << endl;
+    }
+    virtual void func(){
+        cout << "virtual base::func()" << endl;
+    }
+
+    virtual void func2() = 0; // 纯虚函数，派生类必须实现
+    virtual void func2(int i) {
+        cout << "virtual base::func2(int i)" << endl;
+    }
+    void func3() {
+        cout << "base::func3()" << endl;
+    }
+    void func3(int i) {
+        cout << "base::func3(int i)" << endl;
+    }
+};
+class derived : public base {
+public:
+    derived(){
+        cout << "derived::derived() construct" << endl;
+        // func(); // virtual 调用的是derived的func，很奇怪，书上说这个时候虚函数表还没有初始化，但是这里可以调用，但是最好不要再构造函数中调用虚函数
+                   // 或者把func设置为non-virtual的
+    }
+    virtual ~derived() {
+        cout << "derived::~derived() destruct" << endl;
+    }
+    virtual void func() override { // override使得编译器检查是否有对应的基类函数，如果没有则报错
+        cout << "virtual derived::func()" << endl;
+        base::func(); // 该种方式可以调到基类的虚函数
+    }
+    void func1() {
+        cout << "virtual derived::func1()" << endl;
+        static_cast<base*>(this)->func(); // 该种方式不能调到基类func，仍然是派生类的func，关键在于this指针
+        // 直接访问base基类的表中的副本
+    }
+
+    virtual void func2() override {
+        cout << "virtual derived::func2()" << endl;
+    }
+    void func3() {
+        cout << "derived::func3()" << endl;
+    }
+
+    using base::func2; // 使得基类的func2(int i)可以在派生类中使用, 导致派生类增加新的成员函数
+    using base::func3; // 使得基类的func3(int i)可以在派生类中使用，导致派生类增加新的成员函数
+
+};
+
+class derived1 : private base {
+    // private从base中继承来的成员都是private的，说白了外部对象不能直接强转base，也不能访问base成员
+    // 用private继承，需要考虑哪些接口是真正需要用到，但又不属于该派生类的
+public:
+    derived1(){
+        cout << "derived1::derived1() construct" << endl;
+    }
+    virtual ~derived1() {
+        cout << "derived1::~derived1() destruct" << endl;
+    }
+    virtual void func() override {
+        base::func(); // forwarding functions, 转交函数，该种方式可以调到基类的虚函数
+        cout << "virtual derived1::func()" << endl;
+    }
+    virtual void func2() override {
+        cout << "virtual derived1::func2()" << endl;
+    }
+};
+
+void test5() {
+    cout << __func__ << "--------------------" << endl;
+    derived d;
+    d.func();
+    d.func1();
+    base* b = static_cast<base*>(&d); // 即使用强转也是调用的derived的func
+    b->func();
+
+
+    // public继承
+    cout << "public继承-------------" << endl;
+    // 成员函数重载问题，函数名和参数必须完全一致
+    d.func2(); // 调用的是derived的func2
+    // (&d)->base::func2(); // invalid
+    // d.func2(1); // invalid, 被func2()覆盖了，如果使用要配合类内 using base::func2;
+    d.base::func2(1); // valid，该方法调用也可
+
+    d.func3(); // 调用的是derived的func3
+    // d.func3(1); // invalid，被func3()覆盖了， 如果使用要配合类内 using base::func3;
+    d.base::func3(1); // valid，该方法调用也可
+
+    // private继承
+    cout << "private继承-------------" << endl;
+    derived1 d1;
+    d1.func(); // 调用的是derived1的func
+    // d1.func2(3); // invalid, 被func2()覆盖了，如果使用要配合类内 using base::func2;
+    // d1.fun3(); // invalid, 找不到
+    // base* b1 = static_cast<base*>(&d1); // invalid 即使用强转也不行，因为private继承，base的成员函数在derived1中是private的
+
+}
+
+
+
 int main(int argc, char* argv[]) {
     cout << "test1================" << endl;
     stock1 s1;
@@ -68,7 +176,17 @@ int main(int argc, char* argv[]) {
     int array_b[cnt]{0};
     cout << "sizeof(array_b)=" << sizeof(array_b) << endl;
 
-    
+    class A{}; // empty class，一个空类至少占用一个字节
+    class B : public A{
+        int i; // 4字节，A不占位
+    };
+    class C{
+        A   a; // 8字节，empty class, 组合方式占位，可能有内存对齐问题，很注重空间时兼用用继承方式
+        int i;
+    };
+    cout << " sizeof(A)=" << sizeof(A) << " sizeof(B)=" << sizeof(B) << " sizeof(C)=" << sizeof(C) << endl;
+
+    test5();
     return 0;
 }
 

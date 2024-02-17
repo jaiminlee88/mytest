@@ -65,6 +65,12 @@ void rst() noexcept(false) {
     std::cout << "run rst..." << std::endl;
     abc(); // 会抛出异常，noexcept并不会阻止异常的抛出。
 }
+
+void rst1() noexcept {
+    std::cout << "run rst1..." << std::endl;
+    abc(); // 会抛出异常，noexcept并不会阻止异常的抛出。
+}
+
 int main() {
     try{
         // abc();
@@ -72,7 +78,8 @@ int main() {
         // def();
         // jkl();
         // lmn();
-        rst();
+        // rst();
+        rst1();
     } catch (const char* msg){
         std::cout << "catch exception: " << msg << std::endl;
     } catch (bad_msg msg){

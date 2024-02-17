@@ -99,17 +99,17 @@ public:
     // singerwaiter(const Singer & wt, int p = 0): Worker(wt), Waiter(wt,p), Singer(wt){}
 };
 
-class d {
+class d { // 如果作为虚继承的基类，尽量避免放置数据
 public:
     d(std::string name){ cout << "i am d" << endl;}
 };
 
-class e: virtual public d {
+class e: virtual public d { // 钻石继承必须是虚继承
 public:
     e(std::string name): d(name) { cout << "i am e" << endl;}
 };
 
-class f: virtual public d {
+class f: virtual public d { // 钻石继承必须是虚继承
 public:
     f(std::string name):d(name){ cout << "i am f" << endl;}
 };
@@ -126,6 +126,6 @@ int main() {
     std::string name = "alyo";
     singerwaiter person(name, 123);
 
-    g tmp1(name);
+    g tmp1(name); // 钻石继承
     return 1;
 }
