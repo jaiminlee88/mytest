@@ -22,25 +22,9 @@ void test1() {
     cout << "dst: " << dst << endl;
     delete[] dst;
 }
-int main() {
-    // g++ -O0 -o static_str static_str.cc -std=c++17 -g && objdump -S -t -D static_str > static_str.s
 
-    // 指针指向静态字符串,##直接设置字符串指针
-    const char* str_ptr = "this is a static string";
-    cout << "str_ptr: " << str_ptr << endl;
-
-    //字符串数组
-    // 这里使用一个很取巧的办法，不使用循环，而是使用多个mov语句把字符串设置到堆栈
-    // 对象析构：字符串数组分配在栈上，无需析构
-    char str_array[] = "this is a static string";
-    cout << "str_array: " << str_array << endl;
-
-    //std::string
-    // esi保存了字符串开始地址$0x401e30,调用std::string的构造函数
-    // 对象析构：调用析构函数
-    std::string str = "this is a static string";
-    cout << "str: " << str << endl;
-
+void test2() {
+#if __cplusplus >= 201703L
     //std::string_view
     // #直接设置字符串的长度0x18，也就是24Bytes，还有字符串的起始指针$0x401e30，没有堆内存分配
     // 对象析构：std::string_view分配在栈上，无需析构
@@ -72,7 +56,10 @@ int main() {
     char tmp = 'a';
     std::string_view str3(&tmp);
     cout << "str3: " << str3.substr( 0, 1) << " str3.size()=" << str3.size() << endl;
+#endif
+}
 
+void test3() {
     class str4 {
     private:
         uint64_t capacity_;
@@ -101,6 +88,60 @@ int main() {
 
     string str5 = "static";
     cout << "str5[1] =" << str5[1] << endl;
+}
+void test4 () {
+    // insert and erase
+    vector<int> nums = {1, 2, 0};
+    vector<int> subset{4,5,6,7,8,9};
+    nums.insert(nums.end(), subset.begin(), subset.end());
+    cout << "before     : ";
+    for (auto& it : nums) {
+        cout << it << " ";
+    }
+    cout << endl;
+    nums.erase(nums.begin() + 3, nums.begin() + 4);
+    cout << "after erase: ";
+    for (auto& it : nums) {
+        cout << it << " ";
+    }
+    cout << endl;
+
+    nums.insert(nums.begin(), 18);
+    cout << "after insert: ";
+    for (auto& it : nums) {
+        cout << it << " ";
+    }
+    cout << endl;
+
+    nums.insert(nums.begin() + nums.size(), 19); // 在末尾插入
+    cout << "after insert: ";
+    for (auto& it : nums) {
+        cout << it << " ";
+    }
+    cout << endl;
+}
+
+int main() {
+    // g++ -O0 -o static_str static_str.cc -std=c++17 -g && objdump -S -t -D static_str > static_str.s
+
+    // 指针指向静态字符串,##直接设置字符串指针
+    const char* str_ptr = "this is a static string";
+    cout << "str_ptr: " << str_ptr << endl;
+
+    //字符串数组
+    // 这里使用一个很取巧的办法，不使用循环，而是使用多个mov语句把字符串设置到堆栈
+    // 对象析构：字符串数组分配在栈上，无需析构
+    char str_array[] = "this is a static string";
+    cout << "str_array: " << str_array << endl;
+
+    //std::string
+    // esi保存了字符串开始地址$0x401e30,调用std::string的构造函数
+    // 对象析构：调用析构函数
+    std::string str = "this is a static string";
+    cout << "str: " << str << endl;
 
     test1(); // strcpy
+    test2();
+    test3();
+    test4();
 }

@@ -67,6 +67,7 @@ public:
     }
 
     static void quick_sort_core_1(vector<int>& vec, int start, int end) {
+        // 快速排序 标准写法
         if (start >= end) {
             return;
         }
@@ -90,6 +91,7 @@ public:
         quick_sort_core_1(vec, start, rpos);
         quick_sort_core_1(vec, lpos, end);
     }
+
 };
 
 void print_result(std::vector<int>& numbers, std::vector<int>& result) {

@@ -41,7 +41,7 @@ public:
         int l_cnt = 0;
         int r_cnt = 0;
         int rpos = l.size() - 1;
-        while (lpos + 1 < rpos) { // 二分法试图找到上下限，大范围缩小，但是直接二分不如直接算出上限
+        while (lpos + 1 < rpos) { // 二分法 试图找到上下限，大范围缩小，但是直接二分不如直接算出上限
             max_cnt = 0;
             int mpos = lpos + (rpos - lpos) / 2;
             for (int i = mpos; i < l.size(); ++i) {

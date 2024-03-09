@@ -285,6 +285,13 @@ public:
     }
 
     vector<std::pair<T,int>> get_BFS() {
+        /*
+        * 可以参看./lint_69_levelOrder.cc:98,
+        * 有三种
+        * 第一种，使用单队列，记住每一层的节点数目，每次处理完一层，再处理下一层
+        * 第二种，使用双队列，一个队列读，一个队列存，交替使用
+        * 第三种，使用dummy node哑结点，用哑结点来分割每一层
+        */
         if (root == nullptr) {
             return {};
         }
@@ -358,6 +365,35 @@ public:
         return output;
     }
 
+    std::unordered_map<T, int> get_all_distance_BFS() {
+        std::shared_ptr<TreeNode> curnode = root;
+        std::unordered_map<T, int> distance;
+        std::queue<std::shared_ptr<TreeNode>> q;
+        q.push(curnode);
+        distance[curnode->data] = 0;
+        // 单队列方法
+        while (q.size()) {
+            int size = q.size();
+            for (int i = 0; i < size; ++i) {
+                auto curnode = q.front();
+                q.pop();
+                auto curnode_dis = distance.find(curnode->data);
+                if (curnode_dis == distance.end()) {
+                    continue;
+                }
+                if (curnode->left != nullptr && (distance.find(curnode->left->data) == distance.end())) {
+                    q.push(curnode->left);
+                    distance[curnode->left->data] = curnode_dis->second + 1;
+                }
+                if (curnode->right != nullptr && (distance.find(curnode->right->data) == distance.end())) {
+                    q.push(curnode->right);
+                    distance[curnode->right->data] = curnode_dis->second + 1;
+                }
+            }
+        }
+        return distance;
+    }
+
     void get_nodes_dfs_lmr(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> curnode) {
         if (curnode == nullptr) {
             return;
@@ -368,6 +404,7 @@ public:
     }
 
     void get_nodes_dfs_lmr_traverse(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> _root) {
+        // 看lint 86，有更简单的实现
         if (_root == nullptr) {
             return;
         }
@@ -388,7 +425,7 @@ public:
             curnode = s.top();
             s.pop();
             if (curnode != nullptr) {
-                vec.push_back(std::pair<T,T >(curnode->data, curnode->height));
+                vec.push_back(std::pair<T,T>(curnode->data, curnode->height));
                 if (curnode->right != nullptr) {
                     s.push(curnode->right);
                     curnode = s.top();
@@ -537,5 +574,63 @@ public:
             output.push_back(to_string(_root->data) + "->" + rnode_name);
         }
         return to_string(_root->data);
+    }
+
+    std::unordered_map<T,T> get_all_distance_DFS(){
+        if (root == nullptr) {
+            return {};
+        }
+        std::vector<std::string> output;
+        std::vector<T> subpath;
+        std::unordered_map<T,T> distance; //  记录每个节点到根节点的距离，同时避免重复计算节点
+        get_all_subpath(root, subpath, output, distance);
+        return distance;
+    }
+
+    std::vector<std::string> get_all_subpath(){
+        if (root == nullptr) {
+            return {};
+        }
+        std::vector<std::string> output;
+        std::vector<T> subpath;
+        std::unordered_map<T,T> distance; //  记录每个节点到根节点的距离，同时避免重复计算节点
+        get_all_subpath(root, subpath, output, distance);
+        return output;
+    }
+
+    void get_all_subpath(std::shared_ptr<TreeNode> _root, std::vector<T> &subpath, std::vector<std::string>& output, std::unordered_map<T,T>& distance) {
+        if (_root == nullptr) {
+            return;
+        }
+
+        auto it = distance.find(_root->data);
+        if (it != distance.end()) {
+            return; // 防止环
+        }
+
+        subpath.push_back(_root->data);
+        distance[_root->data] = subpath.size() - 1;
+        if (_root->left == nullptr && _root->right == nullptr) {
+            string path = "";
+            for (int i = 0; i < subpath.size(); ++i) {
+                path += to_string(subpath[i]);
+                if (i != subpath.size() - 1) {
+                    path += "->";
+                }
+            }
+            output.push_back(path);
+            return;
+        }
+
+        if (_root->left != nullptr) {
+            get_all_subpath(_root->left, subpath, output, distance);
+            subpath.pop_back();
+        }
+
+        if (_root->right != nullptr) {
+            get_all_subpath(_root->right, subpath, output, distance);
+            subpath.pop_back();
+        }
+        return;
     }
 };

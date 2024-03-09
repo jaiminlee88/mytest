@@ -1,7 +1,58 @@
 #include "avltree.hh"
+#include "binarytree.hh"
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 using namespace std;
+
+/**
+ * Definition of TreeNode:
+ * class TreeNode {
+ * public:
+ *     int val;
+ *     TreeNode *left, *right;
+ *     TreeNode(int val) {
+ *         this->val = val;
+ *         this->left = this->right = NULL;
+ *     }
+ * }
+ */
+
+class Solution {
+public:
+    /**
+     * @param root: The root of binary tree.
+     * @return: True if this Binary tree is Balanced, or false.
+     */
+    
+    bool isBalanced(TreeNode *root) {
+        // write your code here
+        if (root == nullptr) {
+            return true;
+        }
+        unordered_map<TreeNode *, int> node_depth;
+        return isBalanced(root->left, node_depth)
+            && isBalanced(root->right, node_depth)
+            && (abs(node_depth[root->left] - node_depth[root->right]) <= 1);
+    }
+
+    bool isBalanced(TreeNode* _root, unordered_map<TreeNode*,int>& node_depth) {
+        // left right middle
+        if (_root == nullptr) {
+            return true;
+        }
+        if (_root->left == nullptr && _root->right == nullptr) {
+            node_depth[_root] = 1;
+            return true;
+        }
+        bool l_balanced = isBalanced(_root->left, node_depth);
+        bool r_balanced = isBalanced(_root->right, node_depth);
+        int left_depth = node_depth[_root->left];
+        int right_depth = node_depth[_root->right];
+        node_depth[_root] = max(left_depth, right_depth) + 1;
+        return l_balanced && r_balanced && (abs(left_depth - right_depth) <= 1);
+    }
+};
 
 
 int main() {
@@ -118,23 +169,6 @@ int main() {
         cout << endl;
     };
 
-    auto print_all_distance_DFS = [](AVLTree<int>& tree){
-        auto distance = tree.get_all_distance_DFS();
-        cout << "distance_BFS: ";
-        for (auto& i : distance) {
-            cout << "["<< tree.root->data << "," << i.first << "](" << i.second << ") ";
-        }
-        cout << endl;
-    };
-
-    auto print_all_distance_BFS = [](AVLTree<int>& tree){
-        auto distance = tree.get_all_distance_BFS();
-        cout << "distance_BFS: ";
-        for (auto& i : distance) {
-            cout << "["<< tree.root->data << "," << i.first << "](" << i.second << ") ";
-        }
-        cout << endl;
-    };
     AVLTree<int> tree;
     vector<int> vec;
 
@@ -145,6 +179,4 @@ int main() {
     print_BFS(tree);
     print_path(tree);
     print_all_subpath(tree);
-    print_all_distance_DFS(tree);
-    print_all_distance_BFS(tree);
 }
