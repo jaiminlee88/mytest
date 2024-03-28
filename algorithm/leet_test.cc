@@ -10,7 +10,6 @@
 #include <set>
 #include <queue>
 #include <numeric>
-#include <bitset>
 using namespace std;
 
 
@@ -22,15 +21,6 @@ public:
 int main() {
     Solution s;
     vector<int> nums;
-    vector<int> nums0;
-    vector<int> nums1;
-    vector<vector<int>> nums3;
-    vector<vector<char>> nums4;
-    vector<string> nums5;
-    string str;
-    string str0;
-    string str1;
-    int k = 0;
     auto test = [&s](vector<int>& nums) {
         cout << "nums: ";
         for (auto& i : nums) {

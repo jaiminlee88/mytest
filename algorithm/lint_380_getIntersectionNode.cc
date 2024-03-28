@@ -10,12 +10,47 @@
 #include <set>
 #include <queue>
 #include <numeric>
-#include <bitset>
 using namespace std;
 
+/**
+ * Definition of singly-linked-list:
+ * class ListNode {
+ * public:
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int val) {
+ *        this->val = val;
+ *        this->next = NULL;
+ *     }
+ * }
+ */
+
+class ListNode {
+public:
+    int val;
+    ListNode *next;
+    ListNode(int val) {
+       this->val = val;
+       this->next = NULL;
+    }
+};
 
 class Solution {
 public:
+    /**
+     * @param headA: the first list
+     * @param headB: the second list
+     * @return: a ListNode
+     * 
+     * 请写一个程序，找到两个单链表最开始的交叉节点。
+     * 
+     * 分别计算两条链表长度，找出chainA和chainB的长度差k
+     * 双指针法
+     * 一个指针先走k步，然后两个指针一起走，两者相遇的地方就是交叉点
+     */
+    ListNode * getIntersectionNode(ListNode * headA, ListNode * headB) {
+        // write your code here
+    }
 };
 
 
@@ -25,8 +60,6 @@ int main() {
     vector<int> nums0;
     vector<int> nums1;
     vector<vector<int>> nums3;
-    vector<vector<char>> nums4;
-    vector<string> nums5;
     string str;
     string str0;
     string str1;

@@ -10,12 +10,51 @@
 #include <set>
 #include <queue>
 #include <numeric>
-#include <bitset>
 using namespace std;
 
+/**
+ * Definition of singly-linked-list:
+ * class ListNode {
+ * public:
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int val) {
+ *        this->val = val;
+ *        this->next = NULL;
+ *     }
+ * }
+ */
+
+class ListNode {
+public:
+    int val;
+    ListNode *next;
+    ListNode(int val) {
+       this->val = val;
+       this->next = NULL;
+    }
+};
 
 class Solution {
 public:
+    /**
+     * @param head: The first node of linked list.
+     * @return: True if it has a cycle, or false
+     * 给定一个链表，如果链表中存在环，则返回到链表中环的起始节点，如果没有环，返回null。。
+     */
+    ListNode * detectCycle(ListNode * head) {
+        // write your code here
+        if (head == nullptr || head->next == nullptr) {
+            return nullptr;
+        }
+        // 先找到环上的相遇点
+        // 再走一圈看看环的长度
+        // 再用双指针找到环的起始点，一个指针从头开始，另一个指针先走环的长度k
+        // 最后两点相遇时就是环的起始点
+
+        // 或者两者相遇后，一个指针拉到链表头，两指针每次都走一部，两者再次相遇时就是环的起始点
+        // 这个需要证明
+    }
 };
 
 
@@ -25,8 +64,6 @@ int main() {
     vector<int> nums0;
     vector<int> nums1;
     vector<vector<int>> nums3;
-    vector<vector<char>> nums4;
-    vector<string> nums5;
     string str;
     string str0;
     string str1;

@@ -31,7 +31,17 @@ public:
         dict = ["a"]
         返回 true
 
+        可以用DFS，但是有可能太深
 
+        可行性问题，符号有序，可能用动态规划
+        前i个字符是否可以被拆分为dict中的单词，即前i个字符能否划分为若干区间，典型区间划分问题
+        status   d[i] 表示前i个字符是否可以被拆分为dict中的单词
+        function d[i] = d[j] && s[j+1,i] in dict, 0<=j<i
+                ----->j---->i
+                因为单词持长度有限，所以j的范围有限
+                d[i] = d[j] && s[j+1,i] in dict, (i - max_len + 1) <= j < i
+        init d[0] = true, 空字符串当作一个单词
+        result d[n]
      */
     bool wordBreak(string &s, unordered_set<string> &wordSet) {
         // write your code here
@@ -79,7 +89,7 @@ public:
     }
 
     bool wordBreak_1(string& s, unordered_set<string>& wordDict) {
-        // 按树进行遍历
+        // 单词树，按树进行遍历，DFS
         if (s.size() == 0 || wordDict.size() == 0) {
             return false;
         }

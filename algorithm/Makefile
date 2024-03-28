@@ -80,9 +80,11 @@ $(EXTVERHH):
 	@echo \#define EDGEX_VERHASH \"$(MODVERHASH)\" >> $@
 	@echo \#define EDGEX_COMPILE \"$(_CFLAGS)\" >> $@
 
+# 获取命令行参数
 arg0 := $(word 1, $(MAKECMDGOALS))
 arg1 := $(word 2, $(MAKECMDGOALS))
 arg2 := $(word 3, $(MAKECMDGOALS))
+arg3 := $(word 4, $(MAKECMDGOALS))
 
 ifdef f
 	srcfile := $(shell echo $(f)|awk -F '. ' '{ print $$1 }')
@@ -92,6 +94,15 @@ else
 		f := $(arg1)
 	endif
 endif
+
+ifeq ($(firstword $(MAKECMDGOALS)),tu)
+  # 如果第一个目标是gen，则将剩余的目标作为参数传递给tu规则
+  TU_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(eval $(TU_ARGS):;@:)
+endif
+
+tu:
+	g++ --std=c++11 -Dfunc=${TU_ARGS} -g -O0 -lpthread -latomic -I./ tu_test.cc -o tu_test.out
 
 gen:
 	@echo param: f=${f} srcfile=${srcfile}

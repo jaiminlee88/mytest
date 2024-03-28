@@ -2,6 +2,12 @@
 #include<cstring>
 using namespace std;
 
+// 模板默认参数语法，如果没有传递参数，就使用默认参数，下方就是int
+template <typename T = int>
+void foo() {
+    // 函数实现
+}
+
 struct job{
     char name[40];
     double salary;

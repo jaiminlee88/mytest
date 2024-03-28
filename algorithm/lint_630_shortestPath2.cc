@@ -72,7 +72,7 @@ public:
         int n = grid[0].size();
         vector<vector<int>> dp(m, vector<int>(n, INT_MAX));
         dp[0][0] = 0;
-        for (int c = 0; c < n; ++c) {
+        for (int c = 0; c < n; ++c) { // 从列开始，因为需要用到左侧的值
             for (int r = 0; r < m; ++r) {
                 if (r == 0 && c == 0) {
                     continue;

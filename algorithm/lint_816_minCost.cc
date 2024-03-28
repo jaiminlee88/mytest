@@ -19,7 +19,8 @@ public:
      * (i.e there is a road between city A and city B and the cost is c). 
      * We need to find the smallest cost to travel all the cities starting from 1.
      * 
-     * 旅行商问题，给定一个有权无向图，顶点1∼n，问从顶点1出发，走遍所有顶点的花费最小是多少。题目不保证没有平行边。
+     * 旅行商问题，给定一个有权无向图，顶点1∼n，问从顶点1出发，
+     * 走遍所有顶点的花费最小是多少。题目不保证没有平行边。
      * 要求返回起点
      * 
      *  Input: 

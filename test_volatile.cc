@@ -29,6 +29,7 @@ void test1() {
 }
 int main() {
     // volatile 不保证操作的原子性以及对代码重排顺序没有足够限制——解释了为什么volatile在多线程编程中没用，但是没有解释它应该用在哪
+    // 不要用volatile，它避免了优化
     std::atomic<int> ai(0);         //初始化ai为0
     ai = 10;                        //原子性地设置ai为10
     std::cout << ai << endl;                //原子性地读取ai的值

@@ -88,6 +88,44 @@ void test2 () {
     p4 = p2;
     
 }
+
+void test3() {
+    cout << "============= test3 ==============" << endl;
+    auto p = std::shared_ptr<int>(new int(4));
+    int num{10};
+    auto p1 = std::shared_ptr<int>(p, &num);
+    // p1 是一个 shared_ptr<int>，它被构造为共享 num 的内存。
+    // 然而，这种用法是不安全的，因为 shared_ptr 通常应该管理通过 new 分配的内存，而不是栈上的变量。
+    // 在这种情况下，p1 会认为它所管理的内存是由 p 分配的，这可能导致内存访问错误或未定义的行为。因此，应该避免这种用法。
+    // 对象p的控制块被共享，但是p1的指针指向num，所以p1的指针不会被释放，但是p1的控制块会被释放
+    std::cout << "p1 use_count: " << p1.use_count() 
+            << "\n" << "p1: " << *p1 << "\n";
+
+}
+
+void test4() {
+    auto p = std::shared_ptr<int>(new int(4));
+    // auto p1 = std::shared_ptr<int>(p.get()); // 有风险，p1的控制块被释放，p1的指针指向的内存已经被释放，所以会double free, get()获取原始指针,会把原始指针初始化p1
+    // free(): double free detected in tcache 2
+    // Aborted (core dumped)
+    // p1的控制块被释放，p1的指针指向的内存已经被释放，所以会double free
+    auto p1(p); // 无风险
+    std::cout << "p1 use_count: " << p1.use_count() 
+                << "\n" << "p1: " << *p1 << "\n";
+}
+
+void test5() {
+    cout << "============= test5 ==============" << endl;
+    auto p = std::shared_ptr<int>(new int(4));
+    // int num{10};
+    // auto p1 = std::shared_ptr<int>(p, &num);
+    std::weak_ptr<int> wp1 = p;
+    std::cout << "before wp1 use_count: " << wp1.use_count() 
+                << "\n" << "p1: " << *p << "\n";
+    auto wp2 = wp1;
+    std::cout << "after wp1 use_count: " << wp1.use_count() 
+                << "\n" << "p1: " << *p << "\n";
+}
 int main() {
     // 智能指针内存安全，不会抛出错误 没有潜在的资源泄漏
     // std::auto_ptr<double> pd(new double(5.6));
@@ -139,12 +177,12 @@ int main() {
     {
         cout << "===========test weak_ptr 1" << endl;
         // weak_ptr
-    // weak_ptr是一种用于解决shared_ptr相互引用时产生死锁问题的智能指针。如果有两个shared_ptr相互引用，那么这两个shared_ptr指针的引用计数永远不会下降为0，
-    //     资源永远不会释放。weak_ptr是对对象的一种弱引用，它不会增加对象的use_count，weak_ptr和shared_ptr可以相互转化，shared_ptr可以直接赋值给weak_ptr，
-    //     weak_ptr也可以通过调用lock函数来获得shared_ptr。
-    // weak_ptr指针通常不单独使用，只能和 shared_ptr 类型指针搭配使用。将一个weak_ptr绑定到一个shared_ptr不会改变shared_ptr的引用计数。
-    //     一旦最后一个指向对象的shared_ptr被销毁，对象就会被释放。即使有weak_ptr指向对象，对象也还是会被释放。
-    // weak_ptr并没有重载operator->和operator *操作符，因此不可直接通过weak_ptr使用对象，典型的用法是调用其lock函数来获得shared_ptr示例，进而访问原始对象
+        // weak_ptr是一种用于解决shared_ptr相互引用时产生死锁问题的智能指针。如果有两个shared_ptr相互引用，那么这两个shared_ptr指针的引用计数永远不会下降为0，
+        //     资源永远不会释放。weak_ptr是对对象的一种弱引用，它不会增加对象的use_count，weak_ptr和shared_ptr可以相互转化，shared_ptr可以直接赋值给weak_ptr，
+        //     weak_ptr也可以通过调用lock函数来获得shared_ptr。
+        // weak_ptr指针通常不单独使用，只能和 shared_ptr 类型指针搭配使用。将一个weak_ptr绑定到一个shared_ptr不会改变shared_ptr的引用计数。
+        //     一旦最后一个指向对象的shared_ptr被销毁，对象就会被释放。即使有weak_ptr指向对象，对象也还是会被释放。
+        // weak_ptr并没有重载operator->和operator *操作符，因此不可直接通过weak_ptr使用对象，典型的用法是调用其lock函数来获得shared_ptr示例，进而访问原始对象
         std::shared_ptr<int> p1(new int(42));
         std::weak_ptr<int> wp(p1);
         std::cout << "wp.use_count() = " << wp.use_count() << std::endl;
@@ -192,6 +230,7 @@ int main() {
     // std::shared_ptr<std::string> p1(&s); // no,不可以，因为s不是new出来的，还会double free
 
     // make_shared函数的主要功能是在动态内存中分配一个对象并初始化它，返回指向此对象的shared_ptr;
+    // make_shared只会分配一次内存
     // 由于是通过shared_ptr管理内存，因此一种安全分配和使用动态内存的方法。
     std::shared_ptr<string> p4 = make_shared<string>("hello");
     int tmp = 9;
@@ -214,6 +253,7 @@ int main() {
         cout << "p6 is nullptr" << " p7=" << *p7 << endl;
     }
 
+    // 定制删除器
     std::shared_ptr<int> p8(new int(42), [](int* a){
         cout << "[p8] delete int " << *a << endl;
         delete a;
@@ -233,7 +273,7 @@ int main() {
     shared_ptr ptr，删除器是模板参数传奇，除指针外ptr->point，还有一个指针指向控制模块ptr->control_block（std::make_shared总是创建），
                     控制模块包含reference count，weak count，otherdata（删除器等），而且会多个shared_ptr会共享同一个控制模块
                     shared_ptr<int> p(new int(7)); 会分配两次内存，一个是指针，一个是控制模块
-                    shared_ptr<int> p1(make_shared<int>(7)); 只会分配一次内存，指针和控制模块在一起，效率更高，打不能使用自定义删除器
+                    shared_ptr<int> p1(make_shared<int>(7)); 只会分配一次内存，指针和控制模块在一起，效率更高，但不能使用自定义删除器
                     unique_ptr<int> p2(new int(7)); 只能用new
                     shared_ptr引用结束时，引用计数减1，如果引用计数为0，释放对象的内存，但此时控制模块内存还在
                     weak_ptr引用结束时，控制模块内存才会被销毁，这样就会导致对象内存和控制内存销毁时间延长
@@ -365,5 +405,8 @@ int main() {
 
     test1(); // shared_ptr作为参数调用裸指针，要分离出来
     test2(); // struct node
+    test3(); // 不应该的用法
+    test4(); // 使用get陷阱
+    test5(); // weak_ptr
     return 0;
 }

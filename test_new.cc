@@ -270,6 +270,7 @@ int main() {
     p1 = new chaff;
     p3 = new int[20];
 
+    // placement new 用法
     p2 = new(buffer1) chaff; // 在buffer1中分配空间，从首地址buffer1开始
     p4 = new(buffer2) int[20]{2}; // 在buffer2中分配空间，从首地址buffer2开始
 

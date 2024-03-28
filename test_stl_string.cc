@@ -29,6 +29,9 @@ void test2() {
     // #直接设置字符串的长度0x18，也就是24Bytes，还有字符串的起始指针$0x401e30，没有堆内存分配
     // 对象析构：std::string_view分配在栈上，无需析构
     // std::string_view高效的地方在于，它不管理内存，只保存指针和长度，所以对于只读字符串而言，查找和拷贝是相当简单的
+    // C++17中我们可以使用std::string_view来获取一个字符串的视图，字符串视图并不真正的创建或者拷贝字符串，
+    // 而只是拥有一个字符串的查看功能。std::string_view比std::string的性能要高很多，因为每个std::string都独自拥有一份字符串的拷贝，
+    // 而std::string_view只是记录了自己对应的字符串的指针和偏移位置。当我们在只是查看字符串的函数中可以直接使用std::string_view来代替
     std::string_view sv = "this is a static string";
     cout << "sv.size(): " << sv.size() << endl;
     cout << "sv.data(): " << sv.data() << endl;

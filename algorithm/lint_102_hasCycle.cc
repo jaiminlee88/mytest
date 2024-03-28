@@ -10,12 +10,62 @@
 #include <set>
 #include <queue>
 #include <numeric>
-#include <bitset>
 using namespace std;
 
+/**
+ * Definition of singly-linked-list:
+ * class ListNode {
+ * public:
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int val) {
+ *        this->val = val;
+ *        this->next = NULL;
+ *     }
+ * }
+ */
+
+class ListNode {
+public:
+    int val;
+    ListNode *next;
+    ListNode(int val) {
+       this->val = val;
+       this->next = NULL;
+    }
+};
 
 class Solution {
 public:
+    /**
+     * @param head: The first node of linked list.
+     * @return: True if it has a cycle, or false
+     * 给定一个链表，判断它是否有环。
+     */
+    bool hasCycle(ListNode * head) {
+        // write your code here
+        if (head == nullptr || head->next == nullptr) {
+            return false;
+        }
+        ListNode* slow = head;
+        ListNode* fast = head;
+        // 慢的每次走一步，快的每次走两步
+        while (true) {
+            slow = slow->next;
+            fast = fast->next;
+            if (fast == nullptr || slow == nullptr) {
+                break;
+            }
+            fast = fast->next;
+            if (slow == fast) {
+                return true;
+            }
+            if (fast == nullptr) {
+                break;
+            }
+        }
+        return false;
+    }
 };
 
 
@@ -25,8 +75,6 @@ int main() {
     vector<int> nums0;
     vector<int> nums1;
     vector<vector<int>> nums3;
-    vector<vector<char>> nums4;
-    vector<string> nums5;
     string str;
     string str0;
     string str1;
