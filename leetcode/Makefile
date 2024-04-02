@@ -97,20 +97,9 @@ gen:
 	@echo param: f=${f} srcfile=${srcfile}
 	g++ --std=c++11 -g -O0 -lpthread -latomic ${f} -o ${srcfile}.out
 
-gen14:
-	@echo param: f=${f} srcfile=${srcfile}
-	g++ --std=c++14 -g -O0 -lpthread -latomic ${f} -o ${srcfile}.out
-
 gen17:
 	@echo param: f=${f} srcfile=${srcfile}
 	g++ --std=c++17 -g -O0 -lpthread -latomic ${f} -o ${srcfile}.out
-
-gen20:
-	@echo param: f=${f} srcfile=${srcfile}
-	g++ --std=c++20 -g -O0 -lpthread -latomic ${f} -o ${srcfile}.out
-
-test_pimpl:
-	g++ --std=c++11 -g -O0 -lpthread -latomic  -I./ test_pimpl_gadget.hh test_pimpl_widget.hh   test_pimpl_widget.cc  test_pimpl.cc  -o test_pimpl.out
 
 test_reference:
 	g++ --std=c++11 -g -O0 test_reference.cc -o test_reference.out

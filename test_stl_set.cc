@@ -50,6 +50,34 @@ void test1() {
     }
     cout << endl;
 }
+
+void test2(){
+    struct node {
+        int id;
+        string str;
+        // bool operator<(node& a, node* b) {
+        //     return a.id < b.id;
+        // }
+        bool operator<(const node& a) const {
+            return id < a.id;
+        }
+    };
+    set<node> s;
+    s.insert({1, "hello"});
+    s.insert({4, "world"});
+    s.insert({7, "apple"});
+    s.insert({10, "banana"});
+    for (auto& it : s) {
+        cout << it.id << " " << it.str << endl;
+        // it.str = "new"; // 都是const的，不能修改，除非是地址，或者入队之前修改
+    }
+    auto up_iter = s.upper_bound({5, ""});
+    auto low_iter = s.lower_bound({5, ""}); // 指向 std::set 中第一个不小于（大于或等于）指定键的元素。
+    --low_iter; // 此时指向小于5的最大值
+    // 注意需要判断是否存在，否则会报错
+    cout << up_iter->id << ":" << up_iter->str << endl;
+    cout << low_iter->id << ":" << low_iter->str << endl;
+}
 int main(){
     /*
     begin()     　　 ,返回set容器的第一个元素
@@ -114,4 +142,6 @@ int main(){
     cout << endl;
 
     test1();
+
+    test2();
 }

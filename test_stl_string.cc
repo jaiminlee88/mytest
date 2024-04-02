@@ -124,6 +124,19 @@ void test4 () {
     cout << endl;
 }
 
+void test5() {
+    char a = 'a';
+    char b = 'b';
+    char c = 'c';
+    string s;
+    s.append(1, a);
+    s.append(1, b);
+    cout << "s: " << s << endl;
+    string s1("111");
+    s1 += s;
+    cout << "s1: " << s1 << endl;
+    cout << "s1.substr(0,3): " << s1.substr(0,3) << endl;
+}
 int main() {
     // g++ -O0 -o static_str static_str.cc -std=c++17 -g && objdump -S -t -D static_str > static_str.s
 
@@ -147,4 +160,5 @@ int main() {
     test2();
     test3();
     test4();
+    test5();
 }

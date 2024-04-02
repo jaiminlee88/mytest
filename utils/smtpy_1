@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+
+################################################################################
+# smtpy --- SMTP client in Python
+# [sunyj Mar 2012]
+# ------------------------------------------------------------------------------
+# Sample conf file:
+# /etc/smtpy.conf
+# {
+#   "tim":
+#   {"account": "tim:123456@smtp:25",
+#    "smtpuser": "tim@email-server.com",
+#    "from": "Tim Cook <tim@email-server.com>"
+#   },
+#   
+#   "steve":
+#   {"account": "steve.sun:password@smtp.server.com:25",
+#    "from": "Steve Sun <steve.sun@email.server.com>"
+#   }
+# }
+################################################################################
+
+import os, sys, getopt, json, smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email.utils import COMMASPACE, formatdate
+from email.encoders import encode_base64
+from socket import gethostname
+
+def get_conf():
+    trylist = ['/etc/smtpy.conf', '/hilo/etc/smtpy.conf']
+    fname = None
+    conf = None
+    for f in trylist:
+        if os.path.exists(f):
+            with open(f, 'r') as fh:
+                try:
+                    conf = json.load(fh)
+                except Exception as e:
+                    print("Exception while parsing %s: %s" % (f, str(e)))
+        if conf:
+            fname = f
+            break
+    return (conf, fname)
+
+def die(msg):
+    print(msg)
+    exit(1)
+
+def parse_spec(spec):
+    (user, passwd, host, port) = [None] * 4
+    segs = spec.split(':')
+    if len(segs) == 2:
+        user = segs[0]
+        passwd, host = segs[1].split('@')
+        port = None
+    elif len(segs) == 3:
+        user = segs[0]
+        passwd, host = segs[1].split('@')
+        port = int(segs[2])
+    return (user, passwd, host, port)
+
+def main():
+    cc_addrs = []
+    att_files = []
+    try_times = 2
+    timeout = 30
+    subject = ''
+    addr = None
+    text = None
+    txtfile = None
+    (opts, args) = getopt.getopt(sys.argv[1:], 'r:i:c:a:s:t:f:nh')
+    addsig = True
+    html = False
+    smtpuser = None
+    for key, val in opts:
+        if key == '-c':
+            cc_addrs = val.split(',')
+        elif key == '-a':
+            att_files = val.split(',')
+        elif key == '-s':
+            subject = val
+        elif key == '-t':
+            text = val + "\n"
+        elif key == '-f':
+            txtfile = val
+        elif key == '-n':
+            addsig = False
+        elif key == '-h':
+            html = True
+        elif key == '-r':
+            try_times = int(val)
+        elif key == '-i':
+            timeout = int(val)
+
+    if len(args) < 2:
+        die("Usage:\n\t" + os.path.basename(sys.argv[0]) +
+            " [-c cc1[,cc2[...]]] [-a att1[,att2[...]]] [-s subject]" +
+            " user:passwd@host[:port] to_addr [to_addr2 [...]]" +
+            "\n\tuse -t \"texts\" or -f file, otherwise message texts are read from stdin" +
+            "\n\tuse -n to prevent \"Sent from <hostname>\" at the end of message")
+
+    if txtfile is not None and not os.path.exists(txtfile):
+        die(txtfile + " not found!")
+
+    # parse sender info
+    segs = args[0].split(':')
+    if len(segs) == 1:
+        name = args[0]
+        (conf, fname) = get_conf()
+        if not conf:
+            die("no conf file found!")
+        if name not in conf:
+            die("%s not found in %s!" % (name, fname))
+        (user, passwd, host, port) = parse_spec(conf[name]['account'])
+        if 'smtpuser' in conf[name]:
+            smtpuser = conf[name]['smtpuser']
+        addr = conf[name]['from']
+    else:
+        (user, passwd, host, port) = parse_spec(args[0])
+        addr = user
+    if user is None or host is None:
+        die("bad spec, no user or host found!")
+
+    if smtpuser is None:
+        smtpuser = user
+
+    # parse receivers
+    recvs = args[1:]
+
+    # construct text message
+    if text is None:
+        if txtfile is not None:
+            with open(txtfile, 'r') as fh:
+                text = ''.join(fh.readlines())
+        else:
+            text = ''.join(sys.stdin.readlines())
+    if addsig:
+        text += ("\n\nSent from %s\n" % gethostname())
+    txtmsg = MIMEText(text, html and 'html' or 'plain', 'UTF-8')
+
+    # construct whole message
+    if att_files:
+        msg = MIMEMultipart()
+        msg.attach(txtmsg)
+        for fname in att_files:
+            part = MIMEBase('application', "octet-stream")
+            with open(fname, 'rb') as fh:
+                part.set_payload(fh.read())
+            encode_base64(part)
+            part.add_header('Content-Disposition', 'attachment; filename="%s"'
+                            % os.path.basename(fname))
+            msg.attach(part)
+    else:
+        msg = txtmsg
+
+    msg['From'] = addr
+    msg['To'] = COMMASPACE.join(recvs)
+    if cc_addrs:
+        msg['Cc'] = COMMASPACE.join(cc_addrs)
+        recvs += cc_addrs
+    msg['Date'] = formatdate(localtime=True)
+    msg['Subject'] = subject
+
+    while try_times:
+        try:
+            # send out message
+            if port is None or port == 25:
+                smtp = smtplib.SMTP(host, port, timeout=timeout)
+            elif port == 587:
+                smtp = smtplib.SMTP(host, port, timeout=timeout)
+                smtp.starttls()
+            else:
+                smtp = smtplib.SMTP_SSL(host, port, timeout=timeout)
+            smtp.login(user, passwd)
+            smtp.sendmail(smtpuser, recvs, msg.as_string())
+            smtp.close()
+            break
+        except Exception:
+            try_times -= 1
+            if try_times <= 0:
+                raise
+
+
+if __name__ == '__main__':
+    main()
+
+### smtpy ends here
