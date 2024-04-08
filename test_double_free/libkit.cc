@@ -1,7 +1,7 @@
 
 #include "libkit.hh"
 
-TzInfo TzInfo::_utc; // 会被初始化
+// TzInfo TzInfo::_utc; // 会被初始化
 
 TzInfo::TzInfo() {
     cout << "TzInfo::TzInfo:" << (void*)this << endl;

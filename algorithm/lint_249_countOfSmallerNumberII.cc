@@ -70,7 +70,7 @@ public:
                 blocks.set(a[i]);
             }
             bit_cnt[a[i]]++;
-            block_cnt[a[i] / 100]++;
+            block_cnt[a[i] / 100]++; // 统计块内元素个数，每100个一个块，遍历时就
             int cnt = 0;
             for (int j = 0; j < a[i] / 100; ++j) {
                 cnt += block_cnt[j];

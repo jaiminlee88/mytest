@@ -35,7 +35,8 @@ public:
      */
     int fastPower(int a, int b, int n) {
         // write your code here
-        return fastPower_0(a, b, n);
+        // return fastPower_0(a, b, n);
+        return fastPower_1(a, b, n);
     }
     int fastPower_0(int a, int b, int n) {
         if (b == 0 || a == 0) {
@@ -52,8 +53,21 @@ public:
         tmp = (tmp * tmp) % b;
         if (n % 2 == 1) { // 奇数
             tmp = (tmp * a) % b;
-        } 
+        }
         return tmp;
+    }
+    int fastPower_1(int a, int b, int n) {
+        // 二进制快速幂
+        int ans = 1;
+        int tmp = a;
+        while (n != 0) {
+            if (n % 2 == 1) {
+                ans = (ans * tmp) % b;
+            }
+            tmp = (tmp * tmp) % b;
+            n = (int)(n / 2);
+        }
+        return (int)(ans % b);
     }
 };
 
