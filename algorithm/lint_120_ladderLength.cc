@@ -214,6 +214,104 @@ public:
         }
         return -1;
     }
+
+    int ladderLength_3(string &start, string &end, unordered_set<string> &dict) {
+        // 双向BFS，需要两个队列，两个visited，无向图
+        if (start.size() != end.size()) {
+            return -1;
+        }
+        if (dict.size() == 0) {
+            return -1;
+        }
+        if (start == end) {
+            return 1;
+        }
+        if (start.size() == 1 || diff_only_one(start, end)) {
+            return 2;
+        }
+        unordered_map<string, vector<string>> graph;
+        queue<string> sq;
+        queue<string> eq;
+        sq.push(start);
+        eq.push(end);
+        unordered_set<string> svisited;
+        unordered_set<string> evisited;
+        svisited.insert(start);
+        evisited.insert(end);
+        int level = 1;
+        while (sq.size() > 0 && eq.size() > 0) {
+            int size = sq.size();
+            for (int i = 0; i < size; ++i) {
+                auto curword = sq.front();
+                sq.pop();
+                if (evisited.find(curword) != evisited.end()) {
+                    return level;
+                }
+                auto it = graph.find(curword);
+                if (it == graph.end()) {
+                    for (auto word : dict) {
+                        if (word != curword && diff_only_one(curword, word)) {
+                            graph[curword].push_back(word);
+                            if (svisited.find(word) == svisited.end()) {
+                                sq.push(word);
+                                svisited.insert(word);
+                            }
+                        }
+                    }
+                    cout << curword << " ++> ";
+                    for (auto word : graph[curword]) {
+                        cout << word << " ";
+                    }
+                    cout << endl;
+                } else {
+                    for (auto word : it->second) {
+                        if (svisited.find(word) == svisited.end()) {
+                            sq.push(word);
+                            svisited.insert(word);
+                        }
+                    }
+                }
+            }
+            level++;
+            cout << "level = " << level << endl;
+
+            size = eq.size();
+            for (int i = 0; i < size; ++i) {
+                auto curword = eq.front();
+                eq.pop();
+                if (svisited.find(curword) != svisited.end()) {
+                    return level;
+                }
+                auto it = graph.find(curword);
+                if (it == graph.end()) {
+                    for (auto word : dict) {
+                        if (word != curword && diff_only_one(word, curword)) {
+                            graph[curword].push_back(word);
+                            if (evisited.find(word) == evisited.end()) {
+                                eq.push(word);
+                                evisited.insert(word);
+                            }
+                        }
+                    }
+                    cout << curword << " --> ";
+                    for (auto word : graph[curword]) {
+                        cout << word << " ";
+                    }
+                    cout << endl;
+                } else {
+                    for (auto word : it->second) {
+                        if (evisited.find(word) == evisited.end()) {
+                            eq.push(word);
+                            evisited.insert(word);
+                        }
+                    }
+                }
+            }
+            level++;
+            cout << "level = " << level << endl;
+        }
+        return -1;
+    }
 };
 
 
@@ -226,10 +324,10 @@ int main() {
     start = "a";
     end = "c";
     dict = {"a","b","c"};
-    cout << s.ladderLength_2(start, end, dict) << endl; // 2
+    cout << s.ladderLength_3(start, end, dict) << endl; // 2
 
     start ="hit";
     end = "cog";
     dict = {"hot","dot","dog","lot","log"};
-    cout << s.ladderLength_2(start, end, dict) << endl; // 5
+    cout << s.ladderLength_3(start, end, dict) << endl; // 5
 }

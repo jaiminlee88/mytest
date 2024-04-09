@@ -50,14 +50,15 @@ public:
         if (grid.size() == 0) {
             return -1;
         }
+        vector<vector<bool>> visited; // 未必是最好的，也许可以map
         int row = grid.size();
         int col = grid[0].size();
-        if (!validPoint(source) || !validPoint(destination)) {
+        visited.resize(row, vector<bool>(col, false));
+        if (!validPoint(source, grid, visited) || !validPoint(destination, grid, visited)) {
             return -1;
         }
         int step = -1;
-        vector<vector<bool>> visited; // 未必是最好的，也许可以map
-        visited.resize(row, vector<bool>(col, false));
+
         std::queue<Point> q;
         q.push(source);
         visited[source.x][source.y] = true;
