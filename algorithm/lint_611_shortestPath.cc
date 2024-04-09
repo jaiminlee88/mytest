@@ -44,8 +44,65 @@ public:
         }
         return true;
     }
-
     int shortestPath(vector<vector<bool>> &grid, Point source, Point destination) {
+        return shortestPath_1(grid, source, destination);
+        // return shortestPath_2(grid, source, destination);
+    }
+    int shortestPath_2(vector<vector<bool>> &grid, Point source, Point destination) {
+        // 双向BFS
+        if (grid.size() == 0) {
+            return -1;
+        }
+        if (grid[destination.x][destination.y] == true) {
+            return -1;
+        }
+        if (source.x == destination.x && source.y == destination.y) {
+            return 0;
+        }
+        vector<vector<bool>> svisited(grid.size(), vector<bool>(grid[0].size(), false));
+        vector<vector<bool>> dvisited(grid.size(), vector<bool>(grid[0].size(), false));
+        queue<Point> sq;
+        queue<Point> dq;
+        sq.push(source);
+        dq.push(destination);
+        svisited[source.x][source.y] = true;
+        dvisited[destination.x][destination.y] = true;
+        int step = 0;
+        while (sq.size() > 0 && dq.size() > 0) {
+            if (extent_que(sq, grid, svisited, dvisited, step)) {
+                return step;
+            }
+            if (extent_que(dq, grid, dvisited, svisited, step)) {
+                return step;
+            }
+        }
+        return -1;
+    }
+
+    bool extent_que(queue<Point>& q, vector<vector<bool>> &grid, vector<vector<bool>> &visited, vector<vector<bool>> &other_visited, int& step) {
+        int size = q.size();
+        ++step;
+        for (int i = 0; i < size; ++i) {
+            auto cur = q.front();
+            q.pop();
+            for (auto& d : delta) {
+                auto new_point = cur;
+                new_point.x += d.x;
+                new_point.y += d.y;
+                if (!validPoint(new_point, grid, visited)) {
+                    continue;
+                }
+                if (other_visited[new_point.x][new_point.y]) {
+                    return true;
+                }
+                q.push(new_point);
+                visited[new_point.x][new_point.y] = true;
+            }
+        }
+        return false;
+    }
+
+    int shortestPath_1(vector<vector<bool>> &grid, Point source, Point destination) {
         // write your code here
         if (grid.size() == 0) {
             return -1;
