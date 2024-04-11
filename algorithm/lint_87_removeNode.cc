@@ -85,6 +85,14 @@ public:
      * 给定一棵具有不同节点值的二叉查找树，删除树中与给定值相同的节点。
      * 如果树中没有相同值的节点，就不做任何处理。你应该保证处理之后的树仍是二叉查找树。
      * 
+     Tree = {5,3,6,2,4}
+        value = 3
+        {5,2,6,#,4} 或 {5,4,6,2}
+
+     Tree = {5,3,6,2,4}
+        value = 4
+        {5,3,6,2}
+    
      * 删除节点分为几种情况：
         1.删除的节点为叶子节点：直接删除。
         2.删除的节点只存在左子树或右子树：删除节点的父节点直接指向子树节点。
@@ -112,7 +120,86 @@ public:
                 continue;
             }
         }
-        cout << "curnode: " << curnode->val << " parent: " << parent->val << endl;
+        if (curnode == nullptr) {
+            return root;
+        }
+        // curnode may be the root, or the left or right child of parent
+        if (curnode->left == nullptr && curnode->right == nullptr) {
+            if (parent != nullptr) {
+                if (parent->left == curnode) {
+                    parent->left = nullptr;
+                } else {
+                    parent->right = nullptr;
+                }
+            }
+            if (root == curnode) {
+                root = nullptr;
+            }
+            delete curnode;
+        } else if (curnode->left != nullptr && curnode->right == nullptr) {
+            if (parent != nullptr) {
+                if (parent->left == curnode) {
+                    parent->left = curnode->left;
+                } else {
+                    parent->right = curnode->left;
+                }
+            }
+            if (root == curnode) {
+                root = curnode->left;
+            }
+            delete curnode;
+        } else if (curnode->left == nullptr && curnode->right != nullptr) {
+            if (parent != nullptr) {
+                if (parent->left == curnode) {
+                    parent->left = curnode->right;
+                } else {
+                    parent->right = curnode->right;
+                }
+            }
+            if (root == curnode) {
+                root = curnode->right;
+            }
+            delete curnode;
+        } else { // both left and right child are not null
+            TreeNode* mostright_parent = curnode;
+            TreeNode* mostright = curnode->right;
+            while (mostright != nullptr) {
+                if (mostright->right != nullptr) {
+                    mostright_parent = mostright;
+                    mostright = mostright->right;
+                } else if (mostright->left != nullptr) {
+                    mostright_parent = mostright;
+                    mostright = mostright->left;
+                } else {
+                    break;
+                }
+            }
+            if (mostright_parent->left == mostright) {
+                mostright_parent->left = nullptr;
+            } else {
+                mostright_parent->right = nullptr;
+            }
+            curnode->val = mostright->val;
+            delete mostright;
+            while (true) {
+                if (curnode == nullptr) {
+                    break;
+                } else if (curnode->left != nullptr && curnode->left->val > curnode->val) {
+                    int tmp = curnode->val;
+                    curnode->val = curnode->left->val;
+                    curnode->left->val = tmp;
+                    curnode = curnode->left;
+                } else if (curnode->right != nullptr && curnode->right->val < curnode->val) {
+                    int tmp = curnode->val;
+                    curnode->val = curnode->right->val;
+                    curnode->right->val = tmp;
+                    curnode = curnode->right;
+                } else {
+                    break;
+                }
+            }
+            return root;
+        }
         return root;
     }
 };

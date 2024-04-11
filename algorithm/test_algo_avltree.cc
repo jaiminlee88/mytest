@@ -20,8 +20,10 @@ int main() {
         }
     };
     auto print_data = [](AVLTree<int>& tree) {
+        cout << "print_data---> ";
         std::vector<std::pair<int, int>> vec;
-        tree.get_nodes_dfs_lmr(vec, tree.root);
+        // tree.get_nodes_dfs_lmr(vec, tree.root);
+        tree.get_nodes_dfs_morris(vec, tree.root);
         cout << "inorder: ";
         for (auto i : vec) {
             cout << i.first << "(" << i.second << ") ";

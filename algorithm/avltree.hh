@@ -394,6 +394,7 @@ public:
         return distance;
     }
 
+    // 中序遍历，递归
     void get_nodes_dfs_lmr(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> curnode) {
         if (curnode == nullptr) {
             return;
@@ -403,6 +404,7 @@ public:
         get_nodes_dfs_lmr(vec, curnode.get()->right);
     }
 
+    // 中序遍历，迭代
     void get_nodes_dfs_lmr_traverse(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> _root) {
         // 看lint 86，有更简单的实现
         if (_root == nullptr) {
@@ -436,6 +438,22 @@ public:
         }
     }
 
+    // morris算法，本身也是中序遍历，左中右，时间复杂度O(N),空间复杂度O(1)
+    /*
+    莫里斯算法实现思想:
+    当前节点cur, 一开始的cur来到整棵树的头结点位置:
+    1. cur无左树, cur = cur.right
+    2. cur有左树, 找到左树最右节点mostright
+        1.1. mostright的右指针指向null的时候, mostright.right = cur, cur = cur.left
+        1.2. mostright的右指针指向cur的时候, mostright.right = null, cur = cur.right
+    连接过程:先连接后左移
+    复原过程：先右移后斩断，若斩断位置到位，立刻执行斩断，如果位置不到位，通过while循环到达指定位置
+    */
+    void get_nodes_dfs_morris(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> _root) {
+
+    }
+
+    // 后序遍历，递归
     void get_nodes_dfs_lrm(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> curnode) {
         if (curnode == nullptr) {
             return;
@@ -452,6 +470,7 @@ public:
     这样就 保证了正确的访问顺序。可以看出，在这个过程中，每个结点都两次出现在栈顶，只有在第二次出现
     在栈顶时，才能访问它。因此需要多设置一个变量标识该结点是 否是第一次出现在栈顶。
     */
+   // 后序遍历，迭代
     void get_nodes_dfs_lrm_traverse(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> curnode) {
         // 最难，标记法实现
         if (curnode == nullptr) {
@@ -519,6 +538,7 @@ public:
             curnode = nullptr;
         }
     }
+    // 前序遍历，递归
     void get_nodes_dfs_mlr(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> curnode) {
         if (curnode == nullptr) {
             return;
@@ -528,6 +548,7 @@ public:
         get_nodes_dfs_mlr(vec, curnode.get()->right);
     }
 
+    // 前序遍历，迭代
     void get_nodes_dfs_mlr_traverse(std::vector<pair<T,T>>& vec, std::shared_ptr<TreeNode> curnode) {
         if (curnode == nullptr) {
             return;
