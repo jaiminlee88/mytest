@@ -160,6 +160,28 @@ void test2(){
     }
     cout << endl;
 }
+
+class cmp4 {
+public:
+    bool operator()(const int& a, const int& b) {
+        return a > b; // 这是小根堆，前面是指堆下方的元素大于上方
+        // return a < b; // 这是大根堆，前面是指堆下方的元素小于上方
+    }
+};
+
+void test4 () {
+    cout << "test4====================" << endl;
+    priority_queue<int, vector<int>, cmp4> q;
+    q.push(4);
+    q.push(3);
+    q.push(2);
+    q.push(1);
+    while (!q.empty()) {
+        cout << q.top() << " ";
+        q.pop();
+    }
+    cout << endl;
+}
 int main(){
     /*
     begin()     　　 ,返回set容器的第一个元素
@@ -174,4 +196,5 @@ int main(){
     test1();
     test2();
     test3();
+    test4();
 }
