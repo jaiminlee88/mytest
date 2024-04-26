@@ -17,7 +17,7 @@ public:
         }
         int lpos = 0;
         int rpos = a.size() - 1;
-        while (lpos <= rpos) {
+        while (lpos <= rpos) { // 分为正负两部分
             while (lpos < rpos && a[lpos] < 0) {
                 ++lpos;
             }

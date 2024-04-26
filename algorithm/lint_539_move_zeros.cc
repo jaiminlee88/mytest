@@ -9,6 +9,18 @@ public:
      * @param nums: an integer array
      * @return: nothing
      * 给一个数组 nums 写一个函数将 0 移动到数组的最后面，非零元素保持原数组的顺序
+     * 
+     * 输入: nums = [0, 1, 0, 3, 12],
+     * 输出: [1, 3, 12, 0, 0].
+     * 
+     * 输入: nums = [0, 0, 0, 3, 1],
+     * 输出: [3, 1, 0, 0, 0].
+     * 
+     * 原数组操作
+     * 用向双指针法，target指针指向放数字的位置，pos指针指向当前数字
+     * 如果pos指向0，pos++，target不动
+     * 如果pos指向非0，pos和target交换，pos++，target++
+     * 如果pos>=nums.size()或者target>=nums.size()，结束
      */
     void moveZeroes(vector<int> &nums) { // 同向双指针法
         // write your code here

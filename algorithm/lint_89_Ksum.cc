@@ -13,6 +13,8 @@ public:
      * 给定 n 个不同的正整数，整数 k(k≤n)以及一个目标数字 target。　
      * 在这 n 个数里面找出 k 个数，使得这 k 个数的和等于目标数字，求问有多少种方案？
      * 用矩阵dp[i][j][t]表示前i个数中选j个数，和为t的方案数
+     * 
+     * 动态规划
      */
     int kSum(vector<int> &a, int k, int target) {
         // write your code here

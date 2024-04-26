@@ -36,6 +36,7 @@ public:
         回忆n=2时
             也可以用降维法，先确定一个数字，然后在剩下的数字中找k-1个数字
             也可用hashmap
+        深度优先搜索
     */
     vector<vector<int>> kSumII(vector<int> &a, int k, int target) {
         // write your code here

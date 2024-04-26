@@ -19,7 +19,28 @@ public:
         if (nums.size() < 2) {
             return;
         }
-        sortColors_core_1(nums, 0, nums.size() - 1);
+        // sortColors_core_1(nums, 0, nums.size() - 1);
+        sortColors_core_2(nums);
+    }
+    void sortColors_core_2(vector<int> &nums) {
+        if (nums.size() < 2) {
+            return;
+        }
+        int index = 0; // 移动指针
+        int left = 0;
+        int right = nums.size() - 1;
+        while (index <= right) {
+            if (nums[index] == 0) {
+                std::swap(nums[index], nums[left]);
+                ++left;
+                ++index;
+            } else if (nums[index] == 2) {
+                std::swap(nums[index], nums[right]);
+                --right;
+            } else { // ignore 1
+                ++index;
+            }
+        }
     }
     void sortColors_core(vector<int>& nums, int start, int end) {
         if (start >= end) {
@@ -49,6 +70,7 @@ public:
         if (start >= end) {
             return;
         }
+        // s三个指针，lpos指向0的右边界，rpos指向2的左边界，tpos指向当前位置
         int lpos = start;
         int rpos = end;
         int tpos = 0;
