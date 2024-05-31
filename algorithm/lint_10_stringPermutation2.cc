@@ -52,7 +52,7 @@ int main() {
         cout << "str: " << str << endl;
         string _str = str;
         auto res = s.stringPermutation2(_str);
-        cout << "permutaions: "<< endl;
+        cout << "permutaions: [" << res.size() << "] "<< endl;
         for (auto& v : res) {
             cout << v << " ";
         }
@@ -65,5 +65,8 @@ int main() {
     test(str);
 
     str = "aabb";
+    test(str);
+
+    str = "abcde";
     test(str);
 }

@@ -109,7 +109,6 @@ public:
     }
 };
 
-git ad
 int main() {
     Solution s;
     vector<int> nums;

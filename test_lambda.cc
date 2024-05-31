@@ -119,7 +119,7 @@ void test2() {
     cout << "[test2] after data.size()=" << data.size() << endl;
 
     PolyWidget pw_1;
-    auto boundPW = std::bind(pw_1,  std::placeholders::_1);
+    auto boundPW = std::bind(pw_1,  std::placeholders::_1); // placeholders是占位符，表示参数位置，依次类推
     boundPW(1930);              //传int给PolyWidget::operatocr()
     boundPW(nullptr);           //传nullptr给PolyWidget::operator()
     boundPW("Rosebud"); 		//传字面值给PolyWidget::operator()
